@@ -23,6 +23,8 @@ func configPath(home, agent string) string {
 		return filepath.Join(home, ".codex", "config.toml")
 	case "cursor":
 		return filepath.Join(home, ".cursor", "hooks.json")
+	case "gemini":
+		return filepath.Join(home, ".gemini", "settings.json")
 	}
 	return ""
 }
@@ -69,6 +71,22 @@ func planInstall(agent string, o Options, strict bool) (change, error) {
 		}
 		hooks := ensureObj(root, "hooks")
 		groups := ensureArr(hooks, "PreToolUse")
+		if countGroupsOurs(groups, agent) != 1 || !hasEqual(groups, entry) {
+			stripGroups(groups, agent)
+			groups.arr = append(groups.arr, entry)
+		}
+	case "gemini":
+		// Gemini times hooks in milliseconds and names them for /hooks.
+		h := fromPairs("type", "command", "command", cmd, "name", "tattlr", "timeout", hookTimeout*1000)
+		entry := fromPairs("matcher", ".*", "hooks", &node{isA: true, arr: []*node{h}})
+		if hc := root.get("hooksConfig"); hc != nil && hc.obj != nil {
+			if en := hc.get("enabled"); en != nil && string(en.raw) == "false" {
+				c.notes = append(c.notes, "warning: hooksConfig.enabled is false in this file, so no hooks run until you remove it")
+			}
+		}
+		c.notes = append(c.notes, geminiNote)
+		hooks := ensureObj(root, "hooks")
+		groups := ensureArr(hooks, "BeforeTool")
 		if countGroupsOurs(groups, agent) != 1 || !hasEqual(groups, entry) {
 			stripGroups(groups, agent)
 			groups.arr = append(groups.arr, entry)
@@ -276,6 +294,8 @@ const (
 	tomlBegin = "# >>> tattlr protect >>>"
 	tomlEnd   = "# <<< tattlr protect <<<"
 )
+
+const geminiNote = "Gemini CLI fails open if a hook crashes or times out, so strict mode can't force a block there. Settings files with comments are not supported."
 
 const codexTrustNote = "Codex asks you to trust new hooks: open Codex and run /hooks once to turn this one on."
 

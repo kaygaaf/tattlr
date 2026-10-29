@@ -36,12 +36,12 @@ func TestProtectCommands(t *testing.T) {
 	if code, _, _ := run(t, home, "{}", false, "hook"); code != 2 {
 		t.Errorf("hook without agent: %d", code)
 	}
-	if code, _, _ := run(t, home, "", false, "protect", "install", "--agent", "gemini", "--bin", bin, "--yes"); code != 2 {
-		t.Errorf("gemini should be refused: %d", code)
+	if code, out, _ := run(t, home, "", false, "protect", "install", "--agent", "gemini", "--bin", bin, "--yes"); code != 0 || !strings.Contains(out, "gemini") {
+		t.Errorf("gemini install: %d\n%s", code, out)
 	}
 
 	code, out, _ = run(t, home, "", false, "protect", "uninstall", "--yes")
-	if code != 0 || !strings.Contains(out, "claude: removed") || strings.Contains(out, "codex") {
+	if code != 0 || !strings.Contains(out, "claude: removed") || !strings.Contains(out, "gemini: removed") || strings.Contains(out, "codex") {
 		t.Errorf("uninstall: %d\n%s", code, out)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".claude", "settings.json")); !os.IsNotExist(err) {

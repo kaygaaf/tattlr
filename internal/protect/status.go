@@ -31,7 +31,7 @@ func Status(home, bin string, now time.Time) []AgentStatus {
 	st, _ := LoadState(home)
 	recent, _ := audit.Tail(config.AuditPath(home), 4<<20)
 	var out []AgentStatus
-	for _, a := range []string{"claude", "codex", "cursor"} {
+	for _, a := range hookAgents {
 		s := AgentStatus{Agent: a, Config: configPath(home, a)}
 		if st != nil {
 			if as, ok := st.Agents[a]; ok && as.Path != "" {

@@ -326,3 +326,72 @@ func TestDiff(t *testing.T) {
 		t.Error("diff of equal texts")
 	}
 }
+
+func TestGeminiRoundTrip(t *testing.T) {
+	home := t.TempDir()
+	p := filepath.Join(home, ".gemini", "settings.json")
+	orig := `{"general": {"vimMode": true}, "hooks": {"BeforeTool": [{"matcher": "write_file", "hooks": [{"type": "command", "command": "./lint.sh"}]}]}}` + "\n"
+	write(t, p, orig)
+	o, out := opts(home, "gemini")
+	if err := Install(o); err != nil {
+		t.Fatal(err)
+	}
+	m := mustJSON(t, read(t, p))
+	groups := m["hooks"].(map[string]any)["BeforeTool"].([]any)
+	if len(groups) != 2 {
+		t.Fatalf("groups: %v", groups)
+	}
+	g := groups[1].(map[string]any)
+	h := g["hooks"].([]any)[0].(map[string]any)
+	if g["matcher"] != ".*" || h["command"] != `'/opt/tattlr bin/tattlr' hook gemini` || h["timeout"] != float64(10000) || h["name"] != "tattlr" {
+		t.Errorf("entry: %v", g)
+	}
+	if !strings.Contains(out.String(), "fails open") {
+		t.Errorf("missing note:\n%s", out)
+	}
+	if err := Install(o); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(mustJSON(t, read(t, p))["hooks"].(map[string]any)["BeforeTool"].([]any)); n != 2 {
+		t.Errorf("second install: %d groups", n)
+	}
+	st := Status(home, "/opt/tattlr bin/tattlr", time.Now())
+	found := false
+	for _, s := range st {
+		if s.Agent == "gemini" && s.Installed {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("status: %+v", st)
+	}
+	if err := Uninstall(o); err != nil {
+		t.Fatal(err)
+	}
+	if !sameJSONIgnoringLayout([]byte(read(t, p)), []byte(orig)) {
+		t.Errorf("not restored:\n%s", read(t, p))
+	}
+}
+
+func TestGeminiFreshFileAndHooksOffWarning(t *testing.T) {
+	home := t.TempDir()
+	p := filepath.Join(home, ".gemini", "settings.json")
+	o, _ := opts(home, "gemini")
+	if err := Install(o); err != nil {
+		t.Fatal(err)
+	}
+	if err := Uninstall(o); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(p); !os.IsNotExist(err) {
+		t.Error("settings.json we created was left behind")
+	}
+	write(t, p, `{"hooksConfig": {"enabled": false}}`)
+	o, out := opts(home, "gemini")
+	if err := Install(o); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "hooksConfig.enabled is false") {
+		t.Errorf("no warning:\n%s", out)
+	}
+}

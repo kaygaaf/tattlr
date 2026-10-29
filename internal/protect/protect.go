@@ -20,7 +20,10 @@ import (
 )
 
 // Agents protect knows how to wire up, in display order.
-var Agents = []string{"claude", "codex", "cursor", "openclaw"}
+var Agents = []string{"claude", "codex", "cursor", "gemini", "openclaw"}
+
+// hookAgents are the ones whose config files protect edits itself.
+var hookAgents = []string{"claude", "codex", "cursor", "gemini"}
 
 // Options for install and uninstall.
 type Options struct {
@@ -90,7 +93,7 @@ func (s *State) save(home string) error {
 // Detect returns the agents that look installed in home.
 func Detect(home string) []string {
 	var out []string
-	for _, a := range []string{"claude", "codex", "cursor"} {
+	for _, a := range hookAgents {
 		if fi, err := os.Stat(agentDir(home, a)); err == nil && fi.IsDir() {
 			out = append(out, a)
 		}
@@ -106,6 +109,8 @@ func agentDir(home, agent string) string {
 		return filepath.Join(home, ".codex")
 	case "cursor":
 		return filepath.Join(home, ".cursor")
+	case "gemini":
+		return filepath.Join(home, ".gemini")
 	}
 	return ""
 }
@@ -192,7 +197,7 @@ func Uninstall(o Options) error {
 	agents := o.Agents
 	quiet := len(agents) == 0
 	if quiet {
-		agents = []string{"claude", "codex", "cursor"}
+		agents = hookAgents
 	}
 	if err := checkAgents(agents); err != nil {
 		return err

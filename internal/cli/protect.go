@@ -76,8 +76,7 @@ func runProtect(args []string, env Env) int {
 		case n == event.AgentClaude:
 			n = "claude"
 		case n == event.AgentGemini:
-			fmt.Fprintln(env.Stderr, "tattlr: Gemini CLI hooks are not supported yet; scan still reads its logs")
-			return 2
+			n = "gemini"
 		}
 		as = append(as, n)
 	}
