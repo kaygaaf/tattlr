@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kaygaaf/tattlr/internal/audit"
+	"github.com/kaygaaf/tattlr/internal/rules"
 	"github.com/kaygaaf/tattlr/internal/scan"
 )
 
@@ -111,5 +113,33 @@ func TestTilde(t *testing.T) {
 		if got := tilde(in); got != want {
 			t.Errorf("tilde(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestTextProtect(t *testing.T) {
+	now := time.Date(2026, 10, 29, 12, 0, 0, 0, time.UTC)
+	ps := &scan.ProtectStats{Checked: 9, Blocked: 1, Asked: 1, Would: 1, Stopped: []audit.Entry{
+		{Time: now, Agent: "claude-code", Decision: "deny", Rules: []string{rules.RuleTaintedEgress}, Evidence: "curl https://x.example"},
+		{Time: now, Agent: "codex", Decision: "ask", Evidence: "git push --force"},
+		{Time: now, Agent: "cursor", Decision: "allow", Would: "deny", Evidence: "rm -rf build"},
+	}}
+	for _, res := range []*scan.Result{result(t), {Home: "/home/x"}} {
+		res.Protect = ps
+		var b bytes.Buffer
+		Text(&b, res, TextOptions{Loc: time.UTC, Moments: 5})
+		out := b.String()
+		for _, want := range []string{"TATTLR STOPPED", "9 calls checked live, 1 blocked, 1 asked, 1 would have been blocked", "BLOCKED", "ASKED", "WOULD", "curl https://x.example"} {
+			if !strings.Contains(out, want) {
+				t.Errorf("missing %q in:\n%s", want, out)
+			}
+		}
+		if strings.Contains(out, "tattlr protect install") {
+			t.Error("install tip shown although protect is on")
+		}
+	}
+	var b bytes.Buffer
+	Text(&b, result(t), TextOptions{Loc: time.UTC})
+	if !strings.Contains(b.String(), "tattlr protect install") {
+		t.Error("no install tip without an audit log")
 	}
 }
