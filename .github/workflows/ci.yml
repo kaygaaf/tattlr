@@ -35,3 +35,24 @@ jobs:
       - uses: golangci/golangci-lint-action@v8
         with:
           version: v2.5
+
+  packaging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: release --snapshot --clean
+      - name: install.sh against the snapshot
+        run: sh -n install.sh && sh scripts/test-install.sh
+      - name: npm launcher
+        run: cd npm && npm test && node scripts/build-packages.mjs
