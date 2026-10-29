@@ -4,7 +4,7 @@ Keep YOLO mode. Get a tattletale.
 
 tattlr reads the session logs your AI coding agents already leave on disk and tells you what they actually did: which secrets they read, what they deleted, what they piped into a shell and where they sent your data. It works with Claude Code, Codex CLI, Gemini CLI, OpenClaw and Cursor, and it never sends anything anywhere.
 
-If you'd rather stop the bad stuff than read about it later, `tattlr protect` hooks into Claude Code, Codex, Cursor and OpenClaw and says no before the tool call runs. You keep YOLO mode for everything else.
+If you'd rather stop the bad stuff than read about it later, `tattlr protect` hooks into Claude Code, Codex, Cursor, Gemini CLI and OpenClaw and says no before the tool call runs. You keep YOLO mode for everything else.
 
 ![tattlr stopping a prompt injection from sending a .env file out](docs/demo.gif)
 
@@ -205,7 +205,7 @@ This is the fun part. Reading a canary is allowed on purpose, so a prompt-inject
 
 ### Agents can't turn tattlr off
 
-Some rules can't be switched off by the policy or the allowlist: touching a canary, sending data out after touching one, and editing tattlr itself. That last one covers the policy file, the audit log, the trap list, the tattlr binary, uninstalling the hooks, and settings like Claude Code's `disableAllHooks` or Codex's `hooks = false`. If you want to change any of that, do it yourself in a terminal.
+Some rules can't be switched off by the policy or the allowlist: touching a canary, sending data out after touching one, and editing tattlr itself. That last one covers the policy file, the audit log, the trap list, the tattlr binary, uninstalling the hooks, and settings like Claude Code's `disableAllHooks`, Codex's `hooks = false` or Gemini's `hooksConfig.enabled: false` (and adding tattlr to `hooksConfig.disabled`). If you want to change any of that, do it yourself in a terminal.
 
 ### The audit log
 
@@ -219,7 +219,7 @@ Every checked call goes to `~/.local/state/tattlr/audit.jsonl`, one JSON line ea
 | Codex CLI | `[[hooks.PreToolUse]]` in `~/.codex/config.toml` (or `hooks.json` if you use that) | No, becomes deny | You have to trust the hook once in Codex with `/hooks`. Each file in an `apply_patch` is checked |
 | Cursor | `beforeShellExecution`, `beforeMCPExecution`, `beforeReadFile` and `preToolUse` in `~/.cursor/hooks.json` | Shell and MCP only | Other events turn ask into deny |
 | OpenClaw | The plugin in [`integrations/openclaw`](integrations/openclaw) | Yes, via `requireApproval` | OpenClaw has no hook config file, so it's a small plugin that calls `tattlr hook openclaw` |
-| Gemini CLI | Not yet | | `scan` still reads its logs |
+| Gemini CLI | `BeforeTool` in `~/.gemini/settings.json` | Yes | Answers with `decision` deny or ask. Ask shows Gemini's own confirm prompt |
 
 ### Known gaps
 
@@ -229,6 +229,10 @@ Every checked call goes to `~/.local/state/tattlr/audit.jsonl`, one JSON line ea
 - Codex can't ask, and its built-in web search runs on OpenAI's side, so no hook sees it.
 - strict mode's "block if tattlr fails" setting is written at install time. If you switch to or from strict, run `tattlr protect install` again.
 - The OpenClaw plugin follows OpenClaw's plugin docs, but I haven't run it inside a live gateway yet.
+- Gemini CLI lets a call through if a hook crashes or times out, so strict mode's "block if tattlr fails" can't be enforced there. tattlr still blocks in strict mode when it runs and can't read the request.
+- If your `~/.gemini/settings.json` has comments in it, `tattlr protect` refuses to touch it. Take the comments out or add the hook by hand.
+- Gemini CLI also has its own TOML policy engine. tattlr doesn't write policies for it; the hook is enough.
+- I checked the Gemini hook contract against the docs and the source, including `ask`, which the source supports but the docs don't mention yet. I haven't run it against a signed-in Gemini CLI.
 - Hooks only see what the agent reports. A tool that spawns its own subprocesses can still do things tattlr never hears about. Scan the logs too.
 
 ## Supported agents
@@ -249,7 +253,6 @@ Everything happens on your machine. tattlr reads log files, prints a report and 
 
 ## Roadmap
 
-- Gemini CLI hooks
 - An MCP proxy for tools that have no hooks
 - Desktop approval prompts for agents that can't ask
 - OpenClaw and Cursor SQLite session stores, more rules and a `--watch` mode
