@@ -1,0 +1,31 @@
+{
+  "sessionId": "77aa88bb-1234-4cde-9f00-aabbccddeeff",
+  "projectHash": "5d41402abc4b2a76b9719d911017c592",
+  "startTime": "2025-09-14T09:12:00.000Z",
+  "lastUpdated": "2025-09-14T09:20:00.000Z",
+  "messages": [
+    {
+      "id": "x1",
+      "timestamp": "2025-09-14T09:12:05.000Z",
+      "type": "user",
+      "content": "install bun"
+    },
+    {
+      "id": "x2",
+      "timestamp": "2025-09-14T09:12:30.000Z",
+      "type": "gemini",
+      "content": "",
+      "toolCalls": [
+        {
+          "id": "c1",
+          "name": "run_shell_command",
+          "args": {
+            "command": "curl -fsSL https://bun.sh/install | bash"
+          },
+          "status": "success",
+          "timestamp": "2025-09-14T09:12:31.000Z"
+        }
+      ]
+    }
+  ]
+}

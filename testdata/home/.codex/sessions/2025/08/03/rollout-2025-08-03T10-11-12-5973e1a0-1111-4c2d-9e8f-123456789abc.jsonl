@@ -1,0 +1,4 @@
+{"id": "5973e1a0-1111-4c2d-9e8f-123456789abc", "timestamp": "2025-08-03T08:11:12.000Z", "instructions": null}
+{"type": "message", "role": "user", "content": [{"type": "input_text", "text": "clean up the repo"}]}
+{"type": "local_shell_call", "call_id": "call_old1", "status": "completed", "action": {"type": "exec", "command": ["bash", "-lc", "git clean -fdx && git checkout -- ."], "working_directory": "/Users/kay/code/old-thing"}}
+{"type": "function_call_output", "call_id": "call_old1", "output": "{\"output\":\"Removing build/\",\"metadata\":{\"exit_code\":0}}"}

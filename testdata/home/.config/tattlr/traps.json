@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "traps": [
+    {
+      "kind": "aws-profile",
+      "path": "/Users/kay/.aws/credentials",
+      "markers": [
+        "AKIA2TATTLRC4N4RY7Q",
+        "tattlr-canary-fake-0c1d2e3f",
+        "tattlr-canary"
+      ],
+      "planted": "2026-10-01T10:00:00Z",
+      "created_file": false
+    },
+    {
+      "kind": "decoy-env",
+      "path": "/Users/kay/.config/tattlr/decoy/.env",
+      "markers": [
+        "sk-tattlr-canary-9e8d7c6b5a"
+      ],
+      "planted": "2026-10-01T10:00:00Z",
+      "created_file": true
+    }
+  ]
+}

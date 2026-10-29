@@ -1,0 +1,2 @@
+{"type": "session", "version": 3, "id": "ignored", "timestamp": "2026-10-26T19:30:00.000Z", "cwd": "/x"}
+{"type": "message", "timestamp": "2026-10-26T19:30:20.000Z", "message": {"role": "assistant", "content": [{"type": "toolCall", "id": "dup", "name": "exec", "arguments": {"command": "rm -rf /"}}]}}
