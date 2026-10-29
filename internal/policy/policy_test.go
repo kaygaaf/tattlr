@@ -3,6 +3,7 @@ package policy
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -139,7 +140,7 @@ func TestLoadAndWriteDefault(t *testing.T) {
 		t.Error("overwrote an existing policy")
 	}
 	fi, _ := os.Stat(path)
-	if fi.Mode().Perm() != 0o600 {
+	if runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 { // no Unix modes on Windows
 		t.Errorf("mode %v", fi.Mode())
 	}
 	if p, err := Load(path); err != nil || p.Source != path {

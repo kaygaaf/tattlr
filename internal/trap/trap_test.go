@@ -3,6 +3,7 @@ package trap
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -29,7 +30,7 @@ func TestPlantAndRemoveFreshHome(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", tr.Path, err)
 		}
-		if fi.Mode().Perm() != 0o600 {
+		if runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 { // no Unix modes on Windows
 			t.Errorf("%s mode %v, want 0600", tr.Path, fi.Mode().Perm())
 		}
 		if len(tr.Markers) == 0 {

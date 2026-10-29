@@ -165,3 +165,10 @@ func TestFirstRunEmptyHome(t *testing.T) {
 		t.Error("empty home should get the welcome, not an empty rap sheet")
 	}
 }
+
+// jsonString quotes s for pasting into a JSON test payload (Windows paths
+// have backslashes).
+func jsonString(s string) string {
+	b, _ := json.Marshal(s)
+	return string(b)
+}

@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -160,7 +161,7 @@ func TestGateAndHeaders(t *testing.T) {
 	}
 	// ui.json is private.
 	fi, err := os.Stat(approval.InfoPath(r.home))
-	if err != nil || fi.Mode().Perm() != 0o600 {
+	if err != nil || runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 { // no Unix modes on Windows
 		t.Errorf("ui.json: %v %v", fi, err)
 	}
 }
@@ -252,7 +253,7 @@ func TestHookThroughUI(t *testing.T) {
 	r.login()
 	proj := filepath.Join(r.home, "code", "app")
 	_ = os.MkdirAll(proj, 0o755)
-	in := `{"session_id":"c1","cwd":"` + proj + `","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"git push --force origin main"}}`
+	in := `{"session_id":"c1","cwd":` + jsonString(proj) + `,"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"git push --force origin main"}}`
 	type out struct {
 		res hook.Result
 		out string
@@ -367,4 +368,11 @@ func TestNoInlineStyleAttributes(t *testing.T) {
 	if bytes.Contains(html, []byte(" style=")) || bytes.Contains(html, []byte("<script>")) {
 		t.Fatal("index.html has inline style or script")
 	}
+}
+
+// jsonString quotes s for pasting into a JSON test payload (Windows paths
+// have backslashes).
+func jsonString(s string) string {
+	b, _ := json.Marshal(s)
+	return string(b)
 }

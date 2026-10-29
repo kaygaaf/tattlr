@@ -29,7 +29,7 @@ func TestProtectCommands(t *testing.T) {
 	}
 
 	// The hook the config points at answers as Claude Code expects.
-	payload := `{"hook_event_name":"PreToolUse","session_id":"s","cwd":"` + home + `","tool_name":"Bash","tool_input":{"command":"tattlr protect uninstall --yes"}}`
+	payload := `{"hook_event_name":"PreToolUse","session_id":"s","cwd":` + jsonString(home) + `,"tool_name":"Bash","tool_input":{"command":"tattlr protect uninstall --yes"}}`
 	code, out, _ = run(t, home, payload, false, "hook", "claude")
 	if code != 0 || !strings.Contains(out, `"permissionDecision":"deny"`) {
 		t.Errorf("hook: %d %s", code, out)

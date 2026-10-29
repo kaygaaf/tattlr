@@ -192,12 +192,12 @@ func TestRootsHonorConfigDir(t *testing.T) {
 	home := userHome()
 	t.Setenv("CLAUDE_CONFIG_DIR", "~/a, /tmp/b/projects ,")
 	got := Roots(home)
-	want := []string{filepath.Join(home, "a"), "/tmp/b"}
+	want := []string{filepath.Join(home, "a"), filepath.Clean("/tmp/b")}
 	if strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Errorf("roots = %v, want %v", got, want)
 	}
 	// A test home ignores the environment.
-	if got := Roots("/nope"); len(got) != 2 || got[0] != "/nope/.config/claude" {
+	if got := Roots("/nope"); len(got) != 2 || got[0] != filepath.Join("/nope", ".config", "claude") {
 		t.Errorf("hermetic roots = %v", got)
 	}
 }

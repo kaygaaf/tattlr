@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -32,7 +33,7 @@ func TestAppendReadTail(t *testing.T) {
 		t.Fatalf("read %d entries, %v", len(es), err)
 	}
 	fi, _ := os.Stat(path)
-	if fi.Mode().Perm() != 0o600 {
+	if runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 { // no Unix modes on Windows
 		t.Errorf("mode %v", fi.Mode())
 	}
 	if !Tainted(es, "claude-code", "7") || Tainted(es, "codex", "7") || Tainted(es, "claude-code", "8") {
