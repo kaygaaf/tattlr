@@ -22,6 +22,9 @@ type AgentStatus struct {
 	Calls24h  int      `json:"calls_24h"`
 	Blocked24 int      `json:"blocked_24h"`
 	Problems  []string `json:"problems,omitempty"`
+	// Trust is Codex's own verdict on the tattlr hook, when it could be read.
+	Trust    string `json:"codex_trust,omitempty"`
+	TrustVia string `json:"codex_trust_source,omitempty"`
 }
 
 var cmdRe = regexp.MustCompile(`"command"\s*:\s*"((?:[^"\\]|\\.)*)"|command\s*=\s*"((?:[^"\\]|\\.)*)"`)
@@ -68,6 +71,12 @@ func Status(home, bin string, now time.Time) []AgentStatus {
 			toml, _ := os.ReadFile(configPathTOML(home))
 			if tomlHooksOff.Match(toml) {
 				s.Problems = append(s.Problems, "hooks are switched off in ~/.codex/config.toml")
+			}
+			if s.Installed {
+				s.Trust, s.TrustVia = codexTrust(home, s.Config)
+				if n := CodexTrustNote(s.Trust); n != "" {
+					s.Problems = append(s.Problems, n)
+				}
 			}
 		}
 		for _, e := range recent {
