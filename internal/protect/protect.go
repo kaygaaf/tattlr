@@ -190,7 +190,8 @@ func Uninstall(o Options) error {
 		return err
 	}
 	agents := o.Agents
-	if len(agents) == 0 {
+	quiet := len(agents) == 0
+	if quiet {
 		agents = []string{"claude", "codex", "cursor"}
 	}
 	if err := checkAgents(agents); err != nil {
@@ -205,6 +206,9 @@ func Uninstall(o Options) error {
 		c, err := planUninstall(a, o, st)
 		if err != nil {
 			return fmt.Errorf("%s: %w", a, err)
+		}
+		if quiet && c.noop() {
+			continue // not asked about it and nothing of ours there
 		}
 		cs = append(cs, c)
 	}
@@ -277,7 +281,11 @@ func apply(cs []change, o Options, st *State, install bool) error {
 			fmt.Fprintf(o.Out, "%s: hooked up in %s\n", c.agent, tilde(c.path, o.Home))
 		} else {
 			delete(st.Agents, c.agent)
-			fmt.Fprintf(o.Out, "%s: removed from %s\n", c.agent, tilde(c.path, o.Home))
+			if c.remove {
+				fmt.Fprintf(o.Out, "%s: removed, and deleted %s\n", c.agent, tilde(c.path, o.Home))
+			} else {
+				fmt.Fprintf(o.Out, "%s: removed from %s\n", c.agent, tilde(c.path, o.Home))
+			}
 		}
 	}
 	return nil

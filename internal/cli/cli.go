@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -35,12 +36,24 @@ type Env struct {
 	TTY    bool // stdout is a terminal
 	InTTY  bool // stdin is a terminal
 	Getenv func(string) string
+	Bin    string // absolute path of this tattlr binary
 }
 
 // OSEnv builds an Env from the real process.
 func OSEnv() Env {
 	return Env{Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr, Home: scan.Home(), Now: time.Now(),
-		TTY: isTTY(os.Stdout), InTTY: isTTY(os.Stdin), Getenv: os.Getenv}
+		TTY: isTTY(os.Stdout), InTTY: isTTY(os.Stdin), Getenv: os.Getenv, Bin: selfPath()}
+}
+
+func selfPath() string {
+	p, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	if r, err := filepath.EvalSymlinks(p); err == nil {
+		p = r
+	}
+	return p
 }
 
 func isTTY(f *os.File) bool {
@@ -53,6 +66,10 @@ const usage = `tattlr: keep YOLO mode, get a tattletale.
 Usage:
   tattlr scan [flags]      read local agent logs and print a rap sheet
   tattlr trap [flags]      plant fake credentials that agents should never touch
+  tattlr protect install   hook tattlr into Claude Code, Codex and Cursor so it can block live
+  tattlr protect status    show what is hooked up and what tattlr stopped lately
+  tattlr protect uninstall take the hooks back out
+  tattlr hook <agent>      what the agent hooks call (reads one tool call as JSON on stdin)
   tattlr rules             list what tattlr looks for
   tattlr version
 
@@ -75,6 +92,10 @@ func Run(args []string, env Env) int {
 		return runTrap(args[1:], env)
 	case "rules":
 		return runRules(env)
+	case "protect":
+		return runProtect(args[1:], env)
+	case "hook":
+		return runHook(args[1:], env)
 	case "version", "--version", "-v":
 		fmt.Fprintln(env.Stdout, "tattlr", Version)
 		return 0
