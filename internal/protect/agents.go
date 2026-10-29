@@ -311,7 +311,7 @@ const (
 
 const geminiNote = "Gemini CLI fails open if a hook crashes or times out, so strict mode can't force a block there. Settings files with comments are not supported."
 
-const codexTrustNote = "Codex asks you to trust new hooks: open Codex and run /hooks once to turn this one on."
+const codexTrustNote = "one more step: Codex skips new or changed hooks until you trust them, and codex exec skips them without a warning. Start codex, type /hooks and trust the tattlr hook, then check with tattlr protect status."
 
 var (
 	tomlBlockRe     = regexp.MustCompile(`(?ms)\n*^` + regexp.QuoteMeta(tomlBegin) + `$.*?^` + regexp.QuoteMeta(tomlEnd) + `$\n?`)
@@ -341,8 +341,19 @@ func tomlInstall(src, cmd string, timeout int) ([]byte, []string, error) {
 		notes = append(notes, "warning: hooks are switched off in config.toml ([features] hooks = false); turn them on or tattlr never runs")
 	}
 	block := tomlBlock(cmd, timeout)
-	if strings.Contains(src, block) {
-		return []byte(src), notes, nil
+	if loc := tomlBlockRe.FindStringIndex(src); loc != nil {
+		ours, foreign := splitTomlBlock(src[loc[0]:loc[1]])
+		if ours == strings.TrimSpace(tomlBlockBody(block)) {
+			return []byte(src), notes, nil
+		}
+		// Rewrite in place: Codex keys hook trust by position, so moving the
+		// block would throw away the user's trust for no reason.
+		repl := "\n\n" + block
+		if foreign != "" {
+			repl += "\n" + foreign + "\n"
+		}
+		out := strings.TrimLeft(src[:loc[0]]+repl+src[loc[1]:], "\n")
+		return []byte(out), notes, nil
 	}
 	out := strings.TrimRight(rest, "\n")
 	if out != "" {
@@ -351,13 +362,69 @@ func tomlInstall(src, cmd string, timeout int) ([]byte, []string, error) {
 	return []byte(out + block), notes, nil
 }
 
-func tomlStrip(src string) string {
-	out := tomlBlockRe.ReplaceAllString(src, "\n")
-	if strings.TrimSpace(out) == "" {
-		return ""
+// tomlBlockBody is the text between the markers.
+func tomlBlockBody(b string) string {
+	b = strings.TrimLeft(b, "\n")
+	b = strings.TrimPrefix(b, tomlBegin)
+	b = strings.TrimSuffix(strings.TrimRight(b, "\n"), tomlEnd)
+	return b
+}
+
+var tomlHeaderRe = regexp.MustCompile(`(?m)^\s*\[`)
+
+// splitTomlBlock separates tattlr's two tables from anything else that ended
+// up between the markers. Codex appends new tables at the end of the file,
+// so when our block is last its trust records and project settings land
+// inside it, and they must survive an uninstall or reinstall.
+func splitTomlBlock(b string) (ours, foreign string) {
+	body := tomlBlockBody(b)
+	idx := tomlHeaderRe.FindAllStringIndex(body, -1)
+	var chunks []string
+	if len(idx) == 0 || strings.TrimSpace(body[:idx[0][0]]) != "" {
+		end := len(body)
+		if len(idx) > 0 {
+			end = idx[0][0]
+		}
+		chunks = append(chunks, body[:end])
 	}
+	for i, l := range idx {
+		end := len(body)
+		if i+1 < len(idx) {
+			end = idx[i+1][0]
+		}
+		chunks = append(chunks, body[l[0]:end])
+	}
+	var keep, mine []string
+	for i := 0; i < len(chunks); i++ {
+		c := strings.TrimSpace(chunks[i])
+		if c == "" {
+			continue
+		}
+		if len(mine) == 0 && strings.HasPrefix(c, "[[hooks.PreToolUse]]") && i+1 < len(chunks) {
+			n := strings.TrimSpace(chunks[i+1])
+			if strings.HasPrefix(n, "[[hooks.PreToolUse.hooks]]") && strings.Contains(n, "tattlr") && regexp.MustCompile(`\bhook\s+codex\b`).MatchString(n) {
+				mine = append(mine, c, n)
+				i++
+				continue
+			}
+		}
+		keep = append(keep, c)
+	}
+	return strings.Join(mine, "\n\n"), strings.Join(keep, "\n\n")
+}
+
+func tomlStrip(src string) string {
 	if !strings.Contains(src, tomlBegin) {
 		return src
 	}
-	return strings.TrimRight(out, "\n") + "\n"
+	out := tomlBlockRe.ReplaceAllStringFunc(src, func(b string) string {
+		if _, foreign := splitTomlBlock(b); foreign != "" {
+			return "\n\n" + foreign + "\n"
+		}
+		return "\n"
+	})
+	if strings.TrimSpace(out) == "" {
+		return ""
+	}
+	return strings.TrimLeft(strings.TrimRight(out, "\n"), "\n") + "\n"
 }

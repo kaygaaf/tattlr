@@ -230,6 +230,9 @@ func apply(cs []change, o Options, st *State, install bool) error {
 	var todo []change
 	for _, c := range cs {
 		for _, n := range c.notes {
+			if n == codexTrustNote && (c.noop() || !install) {
+				continue // nothing changed, so Codex's trust still holds
+			}
 			fmt.Fprintf(o.Out, "%s: %s\n", c.agent, n)
 		}
 		if c.noop() {

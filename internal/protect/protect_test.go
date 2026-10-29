@@ -413,3 +413,63 @@ func TestHookTimeoutCoversApprovalWait(t *testing.T) {
 		t.Errorf("claude has its own prompt and keeps 10s:\n%s", s)
 	}
 }
+
+// config.toml as Codex 0.165.0 left it after trusting the hook in /hooks:
+// it appended its tables inside our markers, because our block was last.
+const codexAfterTrust = `model = "gpt-5"
+
+# >>> tattlr protect >>>
+[[hooks.PreToolUse]]
+matcher = ".*"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "/home/kay/.local/bin/tattlr hook codex"
+timeout = 40
+
+[hooks.state]
+
+[hooks.state."/home/kay/.codex/config.toml:pre_tool_use:0:0"]
+trusted_hash = "sha256:e9dfa3bf8f24bfc596c5cb3091054e51f33097bcebd97f8e50e01b199e153e97"
+
+[projects."/home/kay/code/proj"]
+trust_level = "trusted"
+# <<< tattlr protect <<<
+`
+
+func TestTomlKeepsWhatCodexAppended(t *testing.T) {
+	cmd := "/home/kay/.local/bin/tattlr hook codex"
+	// Same hook again: nothing to do, so trust stays.
+	out, _, err := tomlInstall(codexAfterTrust, cmd, 40)
+	if err != nil || string(out) != codexAfterTrust {
+		t.Fatalf("reinstall changed the file (err %v):\n%s", err, out)
+	}
+	// Uninstall must keep Codex's own tables.
+	stripped := tomlStrip(codexAfterTrust)
+	for _, want := range []string{`model = "gpt-5"`, `[hooks.state."/home/kay/.codex/config.toml:pre_tool_use:0:0"]`, `trusted_hash = "sha256:e9df`, `trust_level = "trusted"`} {
+		if !strings.Contains(stripped, want) {
+			t.Errorf("uninstall dropped %q:\n%s", want, stripped)
+		}
+	}
+	for _, gone := range []string{"tattlr hook codex", tomlBegin, tomlEnd, "[[hooks.PreToolUse]]"} {
+		if strings.Contains(stripped, gone) {
+			t.Errorf("uninstall left %q:\n%s", gone, stripped)
+		}
+	}
+	// A new binary path rewrites our tables in place and keeps the rest.
+	out, _, err = tomlInstall(codexAfterTrust, "/opt/tattlr hook codex", 40)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(out)
+	if !strings.Contains(s, `command = "/opt/tattlr hook codex"`) || strings.Contains(s, "/home/kay/.local/bin/tattlr") ||
+		!strings.Contains(s, "trusted_hash") || !strings.Contains(s, `trust_level = "trusted"`) {
+		t.Errorf("rewrite lost something:\n%s", s)
+	}
+	if strings.Index(s, "[[hooks.PreToolUse]]") > strings.Index(s, "[hooks.state]") {
+		t.Errorf("block moved after the state tables:\n%s", s)
+	}
+	if again, _, _ := tomlInstall(s, "/opt/tattlr hook codex", 40); string(again) != s {
+		t.Errorf("second rewrite not a no-op:\n%s", again)
+	}
+}
