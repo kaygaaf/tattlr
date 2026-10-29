@@ -24,6 +24,11 @@ const artifacts = JSON.parse(fs.readFileSync(path.join(dist, "artifacts.json"), 
 const NODE_OS = { darwin: "darwin", linux: "linux", windows: "win32" };
 const NODE_CPU = { amd64: "x64", arm64: "arm64" };
 
+// npm's spam filter won't take the name tattlr-win32-arm64, so there's no
+// package for it. On Windows arm64 the launcher downloads the binary from the
+// GitHub release on first run instead (checked against checksums.txt).
+const NO_NPM_PACKAGE = new Set(["tattlr-win32-arm64"]);
+
 fs.rmSync(out, { recursive: true, force: true });
 const main = JSON.parse(fs.readFileSync(path.join(npmDir, "package.json"), "utf8"));
 main.version = version;
@@ -36,6 +41,7 @@ for (const a of artifacts) {
   const cpu = NODE_CPU[a.goarch];
   if (!os || !cpu) continue;
   const name = `tattlr-${os}-${cpu}`;
+  if (NO_NPM_PACKAGE.has(name)) continue;
   const dir = path.join(out, name);
   const exe = os === "win32" ? "tattlr.exe" : "tattlr";
   fs.mkdirSync(path.join(dir, "bin"), { recursive: true });

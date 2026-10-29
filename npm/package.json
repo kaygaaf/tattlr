@@ -24,7 +24,6 @@
     "tattlr-darwin-x64": "0.1.0",
     "tattlr-linux-arm64": "0.1.0",
     "tattlr-linux-x64": "0.1.0",
-    "tattlr-win32-arm64": "0.1.0",
     "tattlr-win32-x64": "0.1.0"
   },
   "scripts": {
