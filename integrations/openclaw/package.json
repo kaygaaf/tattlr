@@ -1,0 +1,20 @@
+{
+  "name": "openclaw-tattlr",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ask tattlr before OpenClaw runs a tool. Blocks what your tattlr policy says to block.",
+  "type": "module",
+  "license": "MIT",
+  "peerDependencies": {
+    "openclaw": ">=2026.3.24-beta.2"
+  },
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "openclaw": {
+    "extensions": ["./index.ts"],
+    "compat": {
+      "pluginApi": ">=2026.3.24-beta.2"
+    }
+  }
+}

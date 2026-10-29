@@ -387,8 +387,8 @@ func tilde(p, home string) string {
 }
 
 func openClawHelp(bin string) string {
-	return fmt.Sprintf(`openclaw: OpenClaw hooks are plugins, so there is no config to edit. Install the plugin:
-  openclaw plugins install ./integrations/openclaw
-  and set TATTLR_BIN=%s if tattlr is not on PATH.
+	return fmt.Sprintf(`openclaw: OpenClaw hooks are plugins, so there is no config to edit. From a tattlr checkout run
+  openclaw plugins install --link ./integrations/openclaw
+  then set the plugin's "bin" option (or TATTLR_BIN) to %s if tattlr is not on PATH.
 `, bin)
 }

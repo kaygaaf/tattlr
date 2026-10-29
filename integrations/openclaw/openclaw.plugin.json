@@ -1,0 +1,27 @@
+{
+  "id": "tattlr",
+  "name": "tattlr",
+  "description": "Checks every tool call against your local tattlr policy before it runs.",
+  "categories": ["developer-tools"],
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "bin": {
+        "type": "string",
+        "description": "Path to the tattlr binary. Defaults to $TATTLR_BIN, then tattlr on PATH."
+      },
+      "failClosed": {
+        "type": "boolean",
+        "description": "Block the tool call if tattlr can't be reached. Off by default."
+      },
+      "timeoutMs": {
+        "type": "number",
+        "description": "How long to wait for tattlr. Default 10000."
+      }
+    }
+  }
+}
