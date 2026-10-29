@@ -4,6 +4,10 @@ Keep YOLO mode. Get a tattletale.
 
 tattlr reads the session logs your AI coding agents already leave on disk and tells you what they actually did: which secrets they read, what they deleted, what they piped into a shell and where they sent your data. It works with Claude Code, Codex CLI, Gemini CLI, OpenClaw and Cursor, and it never sends anything anywhere.
 
+If you'd rather stop the bad stuff than read about it later, `tattlr protect` hooks into Claude Code, Codex, Cursor and OpenClaw and says no before the tool call runs. You keep YOLO mode for everything else.
+
+![tattlr stopping a prompt injection from sending a .env file out](docs/demo.gif)
+
 ## Install
 
 ```sh
@@ -23,19 +27,22 @@ tattlr scan --json            # everything, machine readable
 tattlr scan --card sheet.png  # a shareable card (or sheet.svg)
 tattlr scan --fail-on high    # exit 1 if anything high or worse shows up
 tattlr rules                  # list every rule and its severity
+tattlr trap                   # plant fake credentials as bait
+tattlr protect install        # block things live (see below)
+tattlr protect status         # what's hooked up and what got stopped
 ```
 
 ## What it looks like
 
-This is real output from the fixture logs in `testdata/home`, which has two sessions per agent (one for Cursor) full of bad behavior:
+This is real output from the fixture logs in `testdata/home`, which has a couple of sessions per agent full of bad behavior:
 
 ```
 $ tattlr scan --home testdata/home
   TATTLR   RAP SHEET
- 9 sessions, 37 tool calls, 28 flagged calls, Aug 3 2025 to Oct 27 2026
+ 10 sessions, 41 tool calls, 29 flagged calls, Aug 3 2025 to Oct 27 2026
 
  AGENT         SESSIONS  CALLS  FLAGGED  CRIT  HIGH   MED   LOW  SCORE  VERDICT
- claude-code          2     13       10     3     7     3     1    141  public enemy
+ claude-code          3     17       11     3     8     3     1    149  public enemy
  codex                2      9        6     1     5     5     0     80  menace
  gemini-cli           2      6        5     2     3     1     0     77  menace
  openclaw             2      5        4     1     4     1     0     60  menace
@@ -46,7 +53,7 @@ $ tattlr scan --home testdata/home
     2x  CRIT  Piped a remote script into a shell         claude-code, gemini-cli
     1x  CRIT  Wrote straight to a disk device            gemini-cli
     1x  CRIT  Sent secrets over the network              codex
-    6x  HIGH  Read a secret file                         claude-code, cursor, gemini-cli, openclaw
+    7x  HIGH  Read a secret file                         claude-code, cursor, gemini-cli, openclaw
     3x  HIGH  Edited its own config or hooks             claude-code, cursor, gemini-cli
     3x  HIGH  Talked to a paste or webhook drop site     codex, gemini-cli, openclaw
     2x  HIGH  Force pushed                               claude-code, cursor
@@ -69,7 +76,7 @@ $ tattlr scan --home testdata/home
        Touched a tattlr canary
        aws sts get-caller-identity --profile tattlr-canary
 
- Read 9 log files locally. Nothing left this machine. Secrets in commands are masked. 2 canaries planted.
+ Read 11 log files locally. Nothing left this machine. Secrets in commands are masked. 2 canaries planted. Run `tattlr protect install` to block this stuff live.
 ```
 
 Secrets that show up in commands get masked before anything is printed:
@@ -100,7 +107,7 @@ $ tattlr scan --home testdata/home --project landing --top 4 --moments 3
        Put a secret in a URL
        curl -s 'https://api.mailsend.example/v1/lists?api_key=[REDACTED]' | jq length
 
- Read 9 log files locally. Nothing left this machine. Secrets in commands are masked. 2 canaries planted.
+ Read 11 log files locally. Nothing left this machine. Secrets in commands are masked. 2 canaries planted. Run `tattlr protect install` to block this stuff live.
 ```
 
 In a terminal the severities are colored. Set `NO_COLOR` or pass `--no-color` to turn that off. Times are shown in your local timezone.
@@ -135,9 +142,96 @@ tattlr trap --remove        # takes it all back out
 
 By default it adds a `[tattlr-canary]` profile to `~/.aws/credentials` (between clearly marked comment lines) and writes a decoy `.env` under `~/.config/tattlr/decoy`. The keys are random, clearly fake and work nowhere. tattlr never overwrites a file that already exists, and `--remove` only deletes files that still contain its markers. The list of traps lives in `~/.config/tattlr/traps.json`. After that, `tattlr scan` flags any session that reads the file or uses the fake key or profile name.
 
+## Stop it live: tattlr protect
+
+Scan tells you what already happened. `tattlr protect` wires tattlr into the agent's own pre-tool-use hook, so every tool call gets checked against the same rules before it runs.
+
+```sh
+tattlr protect install              # every agent it finds, shows the diff and asks first
+tattlr protect install --agent claude,codex --yes
+tattlr protect status               # what's hooked up, plus a self-test
+tattlr protect uninstall            # puts the config back the way it was
+```
+
+What install does:
+
+- Shows you a diff of each config file before touching it and asks. `--yes` skips the question. Without a terminal and without `--yes` it refuses.
+- Backs up the old file to `~/.config/tattlr/backups/` first.
+- Only adds its own entry. Your other hooks and settings stay byte for byte the same. Running it twice changes nothing.
+- Writes a default policy to `~/.config/tattlr/policy.yaml` if you don't have one.
+
+Uninstall removes only tattlr's entries, and deletes config files only if tattlr created them and they're empty again.
+
+### What gets blocked
+
+Each tool call runs through the same rules as `scan`. What happens next comes from your policy:
+
+```yaml
+mode: protect          # observe, protect or strict
+
+defaults:              # by severity, when a rule has no line of its own
+  critical: deny
+  high: ask
+  medium: allow
+  low: allow
+
+rules:                 # per rule: allow, ask or deny
+  remote-code: deny
+  git-force-push: ask
+  rm-rf: allow
+
+canary_reads: allow    # see below
+
+allow:                 # things you trust (globs)
+  commands:
+    - "go test *"
+  paths:
+    - "~/code/*/.env.example"
+```
+
+- **observe** logs what it would have done and never blocks. Good for the first week.
+- **protect** does what the policy says.
+- **strict** denies anything high or critical, asks on medium, and blocks the call if the tattlr hook itself crashes or times out.
+
+"ask" means the agent's own approval prompt pops up, where the agent has one. Where it doesn't, the call is denied with a reason, so the agent can tell you what it wanted.
+
+If the policy file is broken, tattlr falls back to the built-in default and says so on stderr. Outside strict mode, a crash in tattlr lets the call through instead of breaking your agent.
+
+### Canaries plus protect
+
+This is the fun part. Reading a canary is allowed on purpose, so a prompt-injected agent doesn't notice the trap. But the session gets marked, and from then on anything that session tries to send over the network is denied, even a harmless looking `WebFetch`. That's the demo GIF above. Run it yourself with `scripts/demo.sh`. It uses a throwaway HOME and makes no network calls.
+
+### Agents can't turn tattlr off
+
+Some rules can't be switched off by the policy or the allowlist: touching a canary, sending data out after touching one, and editing tattlr itself. That last one covers the policy file, the audit log, the trap list, the tattlr binary, uninstalling the hooks, and settings like Claude Code's `disableAllHooks` or Codex's `hooks = false`. If you want to change any of that, do it yourself in a terminal.
+
+### The audit log
+
+Every checked call goes to `~/.local/state/tattlr/audit.jsonl`, one JSON line each, with secrets masked. `tattlr scan` reads it and adds a TATTLR STOPPED section with what got blocked or asked. `tattlr protect status` shows the last 24 hours.
+
+### How each agent is hooked up
+
+| Agent | Where | Ask | Notes |
+| --- | --- | --- | --- |
+| Claude Code | `PreToolUse` in `~/.claude/settings.json` | Yes | Answers with `permissionDecision` allow, ask or deny |
+| Codex CLI | `[[hooks.PreToolUse]]` in `~/.codex/config.toml` (or `hooks.json` if you use that) | No, becomes deny | You have to trust the hook once in Codex with `/hooks`. Each file in an `apply_patch` is checked |
+| Cursor | `beforeShellExecution`, `beforeMCPExecution`, `beforeReadFile` and `preToolUse` in `~/.cursor/hooks.json` | Shell and MCP only | Other events turn ask into deny |
+| OpenClaw | The plugin in [`integrations/openclaw`](integrations/openclaw) | Yes, via `requireApproval` | OpenClaw has no hook config file, so it's a small plugin that calls `tattlr hook openclaw` |
+| Gemini CLI | Not yet | | `scan` still reads its logs |
+
+### Known gaps
+
+- Cursor can also run Claude Code's hooks ("third party hooks"). If you have both installed, a call in Cursor may get checked twice. The answer is the same, it just shows up twice in the audit log.
+- I haven't confirmed whether tattlr answering allow also skips Cursor's own approval prompt. If it does, calls tattlr lets through don't get a second look from Cursor.
+- Cursor user hooks don't run in Cursor's cloud agents.
+- Codex can't ask, and its built-in web search runs on OpenAI's side, so no hook sees it.
+- strict mode's "block if tattlr fails" setting is written at install time. If you switch to or from strict, run `tattlr protect install` again.
+- The OpenClaw plugin follows OpenClaw's plugin docs, but I haven't run it inside a live gateway yet.
+- Hooks only see what the agent reports. A tool that spawns its own subprocesses can still do things tattlr never hears about. Scan the logs too.
+
 ## Supported agents
 
-| Agent | Where tattlr looks | How sure we are about the format |
+| Agent | Where `scan` looks | How sure we are about the format |
 | --- | --- | --- |
 | Claude Code | `~/.claude/projects/*/*.jsonl` | Works on our fixtures, not yet checked against lots of real logs |
 | Codex CLI | `~/.codex/sessions/**/rollout-*.jsonl` (`$CODEX_HOME` too) | Checked against the Codex source, old and new formats |
@@ -149,28 +243,27 @@ If your logs look different and tattlr misses things, please open an issue with 
 
 ## Privacy
 
-Everything happens on your machine. tattlr reads log files, prints a report and that is it. No telemetry, no network calls, no accounts. Secret values in commands and outputs are masked before they reach the terminal, the JSON or the card. The card leaves out commands and paths completely.
+Everything happens on your machine. tattlr reads log files, prints a report and that is it. The hooks run locally too and only write to the local audit log. No telemetry, no network calls, no accounts. Secret values in commands and outputs are masked before they reach the terminal, the JSON or the card. The card leaves out commands and paths completely.
 
 ## Roadmap
 
-`tattlr scan` tells you what already happened. Next up is `tattlr protect`, which stops it from happening:
-
-- Live blocking and approvals through Claude Code PreToolUse hooks
-- Codex hooks
-- OpenClaw `before_tool_call`
-- Cursor hooks
-- An MCP proxy for tools that do not have hooks
-- Desktop approval prompts, so you can stay in YOLO mode and still say no to the one command that matters
-
-Also on the list: OpenClaw and Cursor SQLite session stores, more rules and a `--watch` mode.
+- Gemini CLI hooks
+- An MCP proxy for tools that have no hooks
+- Desktop approval prompts for agents that can't ask
+- OpenClaw and Cursor SQLite session stores, more rules and a `--watch` mode
 
 ## Development
 
 ```sh
 go test ./...
 go vet ./...
+golangci-lint run
 python3 scripts/gen_fixtures.py   # regenerate testdata/home
+scripts/demo.sh                   # the prompt injection demo, in a temp HOME
+vhs scripts/demo.tape             # re-record docs/demo.gif (needs VHS)
 ```
+
+The OpenClaw plugin has its own tests: `cd integrations/openclaw && TATTLR_BIN=/path/to/tattlr npm test`.
 
 ## Support
 
