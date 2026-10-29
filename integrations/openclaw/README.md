@@ -13,11 +13,15 @@ All the rules live in `~/.config/tattlr/policy.yaml`, same as the other agents. 
 From a tattlr checkout:
 
 ```sh
-openclaw plugins install --link ./integrations/openclaw
+openclaw plugins install --link --force --accept-capabilities ./integrations/openclaw
 openclaw plugins inspect tattlr --runtime
 ```
 
 `--link` points OpenClaw at this folder rather than copying it, so `git pull` updates it. The entry is TypeScript, which OpenClaw loads for local path installs.
+
+The other two flags are there because OpenClaw 2026.10 asks before it installs a local plugin, and again before it lets a plugin hook tool calls. In a terminal you can drop them and answer the prompts. In a script without a terminal, the install is cancelled without `--force` and refused without `--accept-capabilities`. Read the plugin first (it's two small files) and only pass them if you're fine with it.
+
+`inspect` should say `Status: loaded` and list `before_tool_call` under typed hooks. It also prints two notes you can ignore: the plugin is "hook-only" (a supported shape, it just doesn't register any tools), and its manifest id `tattlr` differs from the npm package name `openclaw-tattlr`.
 
 To remove it: `openclaw plugins uninstall tattlr`.
 
@@ -56,6 +60,13 @@ TATTLR_BIN=/tmp/tattlr npm test
 
 Without `TATTLR_BIN` the end to end tests are skipped and only the mapping tests run. Node 20 or newer, no dependencies.
 
-## Not checked yet
+## What's been checked
 
-I haven't run this inside a live OpenClaw gateway. The hook shape comes from OpenClaw's plugin docs (`before_tool_call` with `block`, `blockReason` and `requireApproval`), and the plugin API is marked experimental, so expect to pin a version.
+Tested with OpenClaw 2026.10.8: installed as above into a throwaway home, then `openclaw agent --local` against a scripted model on 127.0.0.1. The model read a README with a prompt injection in it, ran `ls`, read a planted canary, then tried to curl it to a local listener. The plugin let the first three through, blocked the curl (the listener got nothing), and the agent got tattlr's reason back as the tool result. All four calls landed in the audit log, and `tattlr scan` read the session back out of OpenClaw's SQLite store.
+
+That run used a fake model, not a real provider account, so it shows the plugin and the hook work, not how a real model reacts to a block.
+
+Two known gaps:
+
+- OpenClaw doesn't pass the working directory to `before_tool_call`, so the plugin reports the gateway's own directory as `cwd`. That's right for `openclaw agent --local` started in your project, and can be wrong for a long-running gateway.
+- The plugin API is marked experimental, so expect to pin a version.

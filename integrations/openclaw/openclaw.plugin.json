@@ -4,7 +4,8 @@
   "description": "Checks every tool call against your local tattlr policy before it runs.",
   "categories": ["developer-tools"],
   "activation": {
-    "onStartup": true
+    "onStartup": true,
+    "onCapabilities": ["hook"]
   },
   "configSchema": {
     "type": "object",
