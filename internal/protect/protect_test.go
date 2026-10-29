@@ -395,3 +395,21 @@ func TestGeminiFreshFileAndHooksOffWarning(t *testing.T) {
 		t.Errorf("no warning:\n%s", out)
 	}
 }
+
+func TestHookTimeoutCoversApprovalWait(t *testing.T) {
+	home := t.TempDir()
+	write(t, filepath.Join(home, ".config", "tattlr", "policy.yaml"), "approval_timeout: 45s\n")
+	o, _ := opts(home, "claude", "codex", "cursor")
+	if err := Install(o); err != nil {
+		t.Fatal(err)
+	}
+	if s := read(t, filepath.Join(home, ".codex", "config.toml")); !strings.Contains(s, "timeout = 55\n") {
+		t.Errorf("codex:\n%s", s)
+	}
+	if s := read(t, filepath.Join(home, ".cursor", "hooks.json")); !strings.Contains(s, `"timeout": 55`) {
+		t.Errorf("cursor:\n%s", s)
+	}
+	if s := read(t, filepath.Join(home, ".claude", "settings.json")); !strings.Contains(s, `"timeout": 10`) {
+		t.Errorf("claude has its own prompt and keeps 10s:\n%s", s)
+	}
+}

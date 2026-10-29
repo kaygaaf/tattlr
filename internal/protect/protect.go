@@ -140,7 +140,7 @@ func Install(o Options) error {
 	if len(agents) == 0 {
 		agents = Detect(o.Home)
 		if len(agents) == 0 {
-			return errors.New("found no Claude Code, Codex or Cursor config in your home; pass --agent to pick one")
+			return errors.New("found no Claude Code, Codex, Cursor or Gemini CLI config in your home; pass --agent to pick one")
 		}
 	}
 	if err := checkAgents(agents); err != nil {
@@ -150,7 +150,6 @@ func Install(o Options) error {
 	if err != nil {
 		return fmt.Errorf("fix your policy first: %w", err)
 	}
-	strict := pol.Mode == policy.Strict
 
 	var cs []change
 	for _, a := range agents {
@@ -158,7 +157,7 @@ func Install(o Options) error {
 			fmt.Fprint(o.Out, openClawHelp(o.Bin))
 			continue
 		}
-		c, err := planInstall(a, o, strict)
+		c, err := planInstall(a, o, pol)
 		if err != nil {
 			return fmt.Errorf("%s: %w", a, err)
 		}

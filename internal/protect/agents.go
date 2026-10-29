@@ -6,9 +6,21 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
+
+	"github.com/kaygaaf/tattlr/internal/policy"
 )
 
 const hookTimeout = 10 // seconds; tattlr answers in milliseconds
+
+// timeoutFor is the hook timeout in seconds. Codex and Cursor asks can
+// wait in tattlr ui, so their hooks get the approval wait on top.
+func timeoutFor(agent string, pol *policy.Policy) int {
+	if agent != "codex" && agent != "cursor" || pol.ApprovalTimeout <= 0 {
+		return hookTimeout
+	}
+	return hookTimeout + int((pol.ApprovalTimeout+time.Second-1)/time.Second)
+}
 
 func configPath(home, agent string) string {
 	switch agent {
@@ -38,7 +50,9 @@ var cursorEvents = []struct{ name, matcher string }{
 	{"preToolUse", "Write|Delete"},
 }
 
-func planInstall(agent string, o Options, strict bool) (change, error) {
+func planInstall(agent string, o Options, pol *policy.Policy) (change, error) {
+	strict := pol.Mode == policy.Strict
+	timeout := timeoutFor(agent, pol)
 	path := configPath(o.Home, agent)
 	before, existed, err := readMaybe(path)
 	if err != nil {
@@ -47,7 +61,7 @@ func planInstall(agent string, o Options, strict bool) (change, error) {
 	c := change{agent: agent, path: path, before: before, existed: existed}
 	cmd := Command(o.Bin, agent)
 	if agent == "codex" && strings.HasSuffix(path, ".toml") {
-		c.after, c.notes, err = tomlInstall(string(before), cmd)
+		c.after, c.notes, err = tomlInstall(string(before), cmd, timeout)
 		c.notes = append(c.notes, codexTrustNote)
 		return c, err
 	}
@@ -60,7 +74,7 @@ func planInstall(agent string, o Options, strict bool) (change, error) {
 	}
 	switch agent {
 	case "claude", "codex":
-		h := map[string]any{"type": "command", "command": cmd, "timeout": hookTimeout}
+		h := map[string]any{"type": "command", "command": cmd, "timeout": timeout}
 		entry := fromPairs("matcher", "*", "hooks", &node{isA: true, arr: []*node{hookNode(h, strict && agent == "claude")}})
 		if agent == "codex" {
 			entry = fromPairs("matcher", ".*", "hooks", &node{isA: true, arr: []*node{hookNode(h, false)}})
@@ -97,7 +111,7 @@ func planInstall(agent string, o Options, strict bool) (change, error) {
 		}
 		hooks := ensureObj(root, "hooks")
 		for _, ev := range cursorEvents {
-			pairs := []any{"command", cmd, "timeout", hookTimeout}
+			pairs := []any{"command", cmd, "timeout", timeout}
 			if ev.matcher != "" {
 				pairs = append(pairs, "matcher", ev.matcher)
 			}
@@ -305,7 +319,7 @@ var (
 	tomlHooksOff    = regexp.MustCompile(`(?m)^\s*(codex_)?hooks\s*=\s*false`)
 )
 
-func tomlBlock(cmd string) string {
+func tomlBlock(cmd string, timeout int) string {
 	q := strings.ReplaceAll(strings.ReplaceAll(cmd, `\`, `\\`), `"`, `\"`)
 	return tomlBegin + "\n" +
 		"[[hooks.PreToolUse]]\n" +
@@ -313,11 +327,11 @@ func tomlBlock(cmd string) string {
 		"[[hooks.PreToolUse.hooks]]\n" +
 		"type = \"command\"\n" +
 		"command = \"" + q + "\"\n" +
-		fmt.Sprintf("timeout = %d\n", hookTimeout) +
+		fmt.Sprintf("timeout = %d\n", timeout) +
 		tomlEnd + "\n"
 }
 
-func tomlInstall(src, cmd string) ([]byte, []string, error) {
+func tomlInstall(src, cmd string, timeout int) ([]byte, []string, error) {
 	var notes []string
 	rest := tomlStrip(src)
 	if tomlInlineHooks.MatchString(rest) {
@@ -326,7 +340,7 @@ func tomlInstall(src, cmd string) ([]byte, []string, error) {
 	if tomlHooksOff.MatchString(rest) {
 		notes = append(notes, "warning: hooks are switched off in config.toml ([features] hooks = false); turn them on or tattlr never runs")
 	}
-	block := tomlBlock(cmd)
+	block := tomlBlock(cmd, timeout)
 	if strings.Contains(src, block) {
 		return []byte(src), notes, nil
 	}
