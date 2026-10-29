@@ -4,6 +4,7 @@ package main
 import (
 	"os"
 	"runtime/debug"
+	"strings"
 
 	"github.com/kaygaaf/tattlr/internal/cli"
 )
@@ -13,16 +14,20 @@ import (
 var version = "dev"
 
 func main() {
-	cli.Version = resolveVersion(version)
+	mod := ""
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		mod = bi.Main.Version
+	}
+	cli.Version = resolveVersion(version, mod)
 	os.Exit(cli.Run(os.Args[1:], cli.OSEnv()))
 }
 
-func resolveVersion(v string) string {
-	if v != "dev" {
-		return v
+// resolveVersion picks the version to print. Release builds and go install
+// both come out as "0.1.0", without the leading v that Go module versions have.
+func resolveVersion(ldflag, module string) string {
+	v := ldflag
+	if v == "dev" && module != "" && module != "(devel)" {
+		v = module
 	}
-	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
-		return bi.Main.Version
-	}
-	return v
+	return strings.TrimPrefix(v, "v")
 }
