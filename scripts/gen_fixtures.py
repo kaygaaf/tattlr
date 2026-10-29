@@ -16,7 +16,9 @@ def w(path, lines):
             f.write("\n")
 
 # ---------------- Claude Code ----------------
-# Real shape (checked against claude-code-log's models and ccusage's loader):
+# Real shape, checked against Anthropic's docs (code.claude.com/docs/en/sessions,
+# claude-directory, hooks), claude-code-log's models.py and dev-docs samples,
+# claude-code-viewer's zod schemas and ccusage's Rust loader:
 # assistant replies stream one content block per line, every block line
 # repeating the same message.id and requestId. Tool results come back in a
 # user line as tool_result blocks plus a structured toolUseResult copy.
@@ -65,7 +67,7 @@ def flat(*groups): return [l for g in groups for l in g]
 
 SID = "8f14e45f-ceea-467a-9575-bf2cc7e05d11"
 A, U = cc(SID, "/Users/kay/code/billing-api", "main")
-w(".claude/projects/-Users-kay-code-billing-api/8f14e45f-ceea-467a-9575-bf2cc7e05d11.jsonl", flat(
+BILLING = flat(
     [{"type": "summary", "summary": "Fix flaky invoice tests", "leafUuid": "8f14e45f-main-0099"}],
     [{"type": "file-history-snapshot", "messageId": "snap-1", "snapshot": {"messageId": "snap-1", "trackedFileBackups": {}, "timestamp": "2026-10-21T08:58:12.000Z"}, "isSnapshotUpdate": False}],
     U("2026-10-21T08:58:12.101Z", "the invoice tests are flaky, fix them. you have full access"),
@@ -96,7 +98,8 @@ w(".claude/projects/-Users-kay-code-billing-api/8f14e45f-ceea-467a-9575-bf2cc7e0
     A("2026-10-21T09:08:00.000Z", tu(7, "WebFetch", {"url": "https://pkg.go.dev/testing", "prompt": "how do I use t.Cleanup"})),
     U("2026-10-21T09:08:05.000Z", [tr(7, "...")]),
     [{"type": "ai-title", "aiTitle": "Fix flaky invoice tests", "sessionId": SID}],
-))
+)
+w(".claude/projects/-Users-kay-code-billing-api/8f14e45f-ceea-467a-9575-bf2cc7e05d11.jsonl", BILLING)
 
 # Subagent spawned by the Task call above. Same sessionId, isSidechain true.
 A, U = cc(SID, "/Users/kay/code/billing-api", "main", sidechain=True, agent_id="a3f9c1")
@@ -105,6 +108,29 @@ w(".claude/projects/-Users-kay-code-billing-api/8f14e45f-ceea-467a-9575-bf2cc7e0
     A("2026-10-21T09:02:40.000Z", tu(21, "Read", {"file_path": "/Users/kay/code/billing-api/.env.production"})),
     U("2026-10-21T09:02:41.000Z", [tr(21, "STRIPE_SECRET_KEY=sk_live_51Hprodprodprodprodprod")]),
 ))
+
+
+# Forked with --fork-session (or /branch): the copy replays the earlier
+# lines with their uuids and timestamps but a new sessionId, then goes on.
+# The replayed calls must not count twice. The new env dump was too big, so
+# the tool_result is a <persisted-output> preview and the full text sits in
+# <session>/tool-results/<tool_use_id>.txt. Only the spill has the canary.
+FORK = "c4ca4238-a0b9-4382-8dcc-509a6f75849b"
+FDIR = ".claude/projects/-Users-kay-code-billing-api/"
+A, U = cc(FORK, "/Users/kay/code/billing-api", "main")
+spill = "/Users/kay/.claude/projects/-Users-kay-code-billing-api/" + FORK + "/tool-results/toolu_010009.txt"
+w(FDIR + FORK + ".jsonl", flat(
+    [dict(l, sessionId=FORK) for l in BILLING[:11] if l.get("type") in ("user", "assistant")],
+    U("2026-10-27T10:00:00.000Z", "keep going, why does the stripe test still fail?"),
+    A("2026-10-27T10:00:09.000Z", tu(9, "Bash", {"command": "env | sort", "description": "Show environment"})),
+    [{"parentUuid": None, "isSidechain": False, "userType": "external", "cwd": "/Users/kay/code/billing-api", "sessionId": FORK,
+      "version": "2.1.14", "gitBranch": "main", "type": "progress", "uuid": "prog-1", "timestamp": "2026-10-27T10:00:09.500Z",
+      "data": {"type": "bash_progress", "output": "HOME=/Users/kay"}, "toolUseID": "toolu_010009", "parentToolUseID": "toolu_010009"}],
+    U("2026-10-27T10:00:10.000Z", [tr(9, "<persisted-output>\nOutput too large (48.2KB). Full output saved to: " + spill +
+      "\n\nPreview (first 2KB):\nHOME=/Users/kay\nLANG=en_US.UTF-8\n")]),
+))
+w(FDIR + FORK + "/tool-results/toolu_010009.txt", ["HOME=/Users/kay", "LANG=en_US.UTF-8", "AWS_PROFILE=tattlr-canary",
+    "AWS_ACCESS_KEY_ID=AKIA2TATTLRC4N4RY7Q", "PATH=/usr/local/bin:/usr/bin"])
 
 A, U = cc("3c59dc04-8e33-4b4a-9f4a-0f0d1a7e2b9c", "/Users/kay/code/dotfiles", "main")
 w(".claude/projects/-Users-kay-code-dotfiles/3c59dc04-8e33-4b4a-9f4a-0f0d1a7e2b9c.jsonl", flat(
@@ -123,7 +149,15 @@ w(".claude/projects/-Users-kay-code-dotfiles/3c59dc04-8e33-4b4a-9f4a-0f0d1a7e2b9
     U("2026-10-24T21:19:01.000Z", [tr(16, "created #12")]),
 ))
 
-# Newer installs keep logs under ~/.config/claude instead.
+# Dynamic workflow agent: <session>/subagents/workflows/<run>/agent-<id>.jsonl.
+A, U = cc("3c59dc04-8e33-4b4a-9f4a-0f0d1a7e2b9c", "/Users/kay/code/dotfiles", "main", sidechain=True, agent_id="b7e2")
+w(".claude/projects/-Users-kay-code-dotfiles/3c59dc04-8e33-4b4a-9f4a-0f0d1a7e2b9c/subagents/workflows/wf_01/agent-b7e2.jsonl", flat(
+    U("2026-10-24T21:20:00.000Z", "list every aws profile"),
+    A("2026-10-24T21:20:05.000Z", tu(17, "Grep", {"pattern": "\\[profile ", "path": "/Users/kay/.aws/config"})),
+    U("2026-10-24T21:20:06.000Z", [tr(17, "[profile staging]")]),
+))
+
+# ccusage also reads ~/.config/claude (the XDG spot older installs used).
 A, U = cc("6512bd43-d9ca-46e0-8a2b-1f0e3c4d5a6b", "/Users/kay/code/blog", "draft")
 w(".config/claude/projects/-Users-kay-code-blog/6512bd43-d9ca-46e0-8a2b-1f0e3c4d5a6b.jsonl", flat(
     U("2026-10-26T19:02:00.000Z", "publish the draft"),
@@ -132,6 +166,28 @@ w(".config/claude/projects/-Users-kay-code-blog/6512bd43-d9ca-46e0-8a2b-1f0e3c4d
     A("2026-10-26T19:03:00.000Z", tu(32, "Monitor", {"description": "watch deploy", "command": "npx netlify deploy --prod --auth $NETLIFY_AUTH_TOKEN", "timeout_ms": 600000})),
     U("2026-10-26T19:03:01.000Z", [tr(32, "Monitor started")]),
 ))
+
+# Older subagent layout: agent-<id>.jsonl right in the project folder,
+# carrying the parent sessionId.
+BLOG = "6512bd43-d9ca-46e0-8a2b-1f0e3c4d5a6b"
+A, U = cc(BLOG, "/Users/kay/code/blog", "draft", sidechain=True, agent_id="5d41")
+w(".config/claude/projects/-Users-kay-code-blog/agent-5d41.jsonl", flat(
+    U("2026-10-26T19:02:20.000Z", "find the netlify site id"),
+    A("2026-10-26T19:02:25.000Z", tu(34, "Grep", {"pattern": "site_id", "path": "/Users/kay/code/blog"})),
+    U("2026-10-26T19:02:26.000Z", [tr(34, "netlify.toml:  site_id = \"abc\"")]),
+))
+
+# A transcript Claude Code set aside instead of overwriting. It repeats the
+# build call (counted once) and holds one call the current file lost.
+A, U = cc(BLOG, "/Users/kay/code/blog", "draft")
+w(".config/claude/projects/-Users-kay-code-blog/" + BLOG + ".orphaned-1793041000000-a1b2.jsonl", flat(
+    U("2026-10-26T19:02:00.000Z", "publish the draft"),
+    A("2026-10-26T19:02:10.000Z", tu(31, "Bash", {"command": "npm run build"})),
+    U("2026-10-26T19:02:40.000Z", [tr(31, "built in 3.1s")]),
+    A("2026-10-26T19:02:50.000Z", tu(33, "Bash", {"command": "git reset --hard origin/draft"})),
+    U("2026-10-26T19:02:51.000Z", [tr(33, "HEAD is now at 9f8e7d6")]),
+))
+
 
 # ---------------- Codex CLI (current envelope format) ----------------
 def cx(ts, typ, payload): return {"timestamp": ts, "type": typ, "payload": payload}

@@ -1,0 +1,5 @@
+HOME=/Users/kay
+LANG=en_US.UTF-8
+AWS_PROFILE=tattlr-canary
+AWS_ACCESS_KEY_ID=AKIA2TATTLRC4N4RY7Q
+PATH=/usr/local/bin:/usr/bin

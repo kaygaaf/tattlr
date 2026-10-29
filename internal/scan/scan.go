@@ -172,16 +172,32 @@ func Run(o Options) (*Result, error) {
 		// Count sessions by id, not by file: Claude Code subagent
 		// transcripts live in their own files but share the parent's id.
 		seenSession := map[string]bool{}
+		var sessions []*event.Session
 		for _, f := range p.Discover(o.Home) {
 			res.Logs++
 			s, err := p.Parse(f)
 			if err != nil {
 				res.Warnings = append(res.Warnings, fmt.Sprintf("%s: %v", f, err))
 			}
-			if s == nil {
-				continue
+			if s != nil {
+				sessions = append(sessions, s)
 			}
+		}
+		// Forked, resumed and set-aside Claude transcripts repeat earlier
+		// calls under the same tool_use id. Oldest session wins.
+		var seenCall map[string]bool
+		if u, ok := p.(interface{ UniqueCallIDs() bool }); ok && u.UniqueCallIDs() {
+			seenCall = map[string]bool{}
+			sort.SliceStable(sessions, func(i, j int) bool { return sessionStart(sessions[i]).Before(sessionStart(sessions[j])) })
+		}
+		for _, s := range sessions {
 			for _, e := range s.Events {
+				if seenCall != nil && e.CallID != "" {
+					if seenCall[e.CallID] {
+						continue
+					}
+					seenCall[e.CallID] = true
+				}
 				if !o.Since.IsZero() && !e.Time.IsZero() && e.Time.Before(o.Since) {
 					continue
 				}
@@ -284,6 +300,18 @@ func Run(o Options) (*Result, error) {
 }
 
 // Verdict turns a score into a label for the rap sheet.
+// sessionStart is the earliest time in a parsed file. Copied lines keep
+// their original timestamps, so a fork sorts after the session it copied.
+func sessionStart(s *event.Session) time.Time {
+	t := s.Start
+	for _, e := range s.Events {
+		if !e.Time.IsZero() && (t.IsZero() || e.Time.Before(t)) {
+			t = e.Time
+		}
+	}
+	return t
+}
+
 func Verdict(score int) string {
 	switch {
 	case score == 0:

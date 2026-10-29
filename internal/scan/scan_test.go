@@ -22,8 +22,15 @@ func TestRunFixtures(t *testing.T) {
 	if len(res.Agents) != 5 {
 		t.Fatalf("agents = %d, want 5", len(res.Agents))
 	}
-	if res.Sessions != 10 {
-		t.Errorf("sessions = %d, want 10", res.Sessions)
+	if res.Sessions != 11 {
+		t.Errorf("sessions = %d, want 11", res.Sessions)
+	}
+	// The fork and the orphaned copy repeat 3 earlier Claude calls; each
+	// tool_use id counts once.
+	for _, a := range res.Agents {
+		if a.Agent == "claude-code" && (a.Sessions != 4 || a.ToolCalls != 21) {
+			t.Errorf("claude sessions/calls = %d/%d, want 4/21", a.Sessions, a.ToolCalls)
+		}
 	}
 	if res.Canaries != 2 {
 		t.Errorf("canaries = %d", res.Canaries)
@@ -38,9 +45,10 @@ func TestRunFixtures(t *testing.T) {
 			t.Errorf("expected rule %s to fire; got %v", r, byRule)
 		}
 	}
-	// Canary: aws credentials read + --profile tattlr-canary + decoy .env read.
-	if byRule["canary"] != 3 {
-		t.Errorf("canary hits = %d, want 3", byRule["canary"])
+	// Canary: aws credentials read + --profile tattlr-canary + decoy .env
+	// read + an env dump whose marker only shows in the spilled output.
+	if byRule["canary"] != 4 {
+		t.Errorf("canary hits = %d, want 4", byRule["canary"])
 	}
 	if res.Moments[0].Severity.String() != "critical" {
 		t.Errorf("worst moment is %v", res.Moments[0].Severity)
@@ -61,8 +69,8 @@ func TestFilters(t *testing.T) {
 		sessions int
 	}{
 		{"agent", Options{Agents: []string{"codex"}}, 2},
-		{"project", Options{Project: "billing"}, 1},
-		{"since", Options{Since: time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)}, 8},
+		{"project", Options{Project: "billing"}, 2},
+		{"since", Options{Since: time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)}, 9},
 		{"nothing", Options{Project: "does-not-exist"}, 0},
 	}
 	for _, c := range cases {
