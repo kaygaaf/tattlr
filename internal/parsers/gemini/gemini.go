@@ -102,10 +102,17 @@ func (Parser) Parse(path string) (*event.Session, error) {
 		s.ID = strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 	}
 	if s.Project == "" {
-		// ~/.gemini/tmp/<project-or-hash>/chats/<file>
-		s.Project = filepath.Base(filepath.Dir(filepath.Dir(path)))
+		// ~/.gemini/tmp/<project-or-hash>/chats/<file>. Newer versions name
+		// the folder after the project and keep its full path in .project_root.
+		dir := filepath.Dir(filepath.Dir(path))
 		if filepath.Base(filepath.Dir(path)) != "chats" {
-			s.Project = filepath.Base(filepath.Dir(filepath.Dir(filepath.Dir(path))))
+			dir = filepath.Dir(dir)
+		}
+		s.Project = filepath.Base(dir)
+		if b, err := os.ReadFile(filepath.Join(dir, ".project_root")); err == nil {
+			if root := strings.TrimSpace(string(b)); filepath.IsAbs(root) {
+				s.Project = root
+			}
 		}
 	}
 	for _, id := range order {
