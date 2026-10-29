@@ -190,3 +190,32 @@ func TestTextProtect(t *testing.T) {
 		t.Error("no install tip without an audit log")
 	}
 }
+
+func TestCardSize(t *testing.T) {
+	var b bytes.Buffer
+	Card(&b, &scan.Result{}, time.UTC)
+	if !strings.Contains(b.String(), `width="1200" height="675"`) {
+		t.Error("card should be 1200x675 so X shows it uncropped")
+	}
+	if !strings.Contains(b.String(), "No agent logs found") {
+		t.Error("empty card should say why it is empty")
+	}
+}
+
+func TestQuipBlocked(t *testing.T) {
+	o := scan.Offense{Rule: "exfil", Title: "Sent secrets over the network", Count: 1}
+	if got := quip(o, false); got != "Secrets got sent over the network once." {
+		t.Error(got)
+	}
+	if got := quip(o, true); !strings.Contains(got, "Blocked before it ran") || strings.Contains(got, "got sent") {
+		t.Error(got)
+	}
+	r := &scan.Result{Moments: []scan.Moment{{Rules: []string{"exfil"}, Blocked: true}}}
+	if !onlyAttempts(r, "exfil") || onlyAttempts(r, "canary") {
+		t.Error("onlyAttempts")
+	}
+	r.Moments = append(r.Moments, scan.Moment{Rules: []string{"exfil"}})
+	if onlyAttempts(r, "exfil") {
+		t.Error("one unblocked moment means it happened")
+	}
+}

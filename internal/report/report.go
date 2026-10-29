@@ -205,7 +205,7 @@ func protectSection(w io.Writer, r *scan.Result, o TextOptions, p painter) {
 			}
 		}
 		fmt.Fprintf(w, " %s  %s  %s  %s\n", p.c(color, label), e.Time.In(o.Loc).Format("Jan 02 15:04"), bold(e.Agent),
-			strings.Join(titles, ", "))
+			joinFit(titles, o.Width-27-len(e.Agent)))
 		fmt.Fprintf(w, "          %s\n", p.c("36", clip(tilde(e.Evidence, r.HomeDir()), o.Width-10)))
 	}
 	fmt.Fprintln(w)
@@ -256,20 +256,41 @@ func headline(r *scan.Result) []string {
 		a := r.Agents[0]
 		out[0] += fmt.Sprintf(" Most wanted: %s (%s).", a.Agent, a.Verdict)
 	}
-	if ps := r.Protect; ps != nil && ps.Blocked > 0 {
-		out[0] += fmt.Sprintf(" tattlr blocked %d live.", ps.Blocked)
-	}
+	attempt := false
 	if len(r.Offenses) > 0 {
-		if q := quip(r.Offenses[0]); q != "" {
+		attempt = onlyAttempts(r, r.Offenses[0].Rule)
+		if q := quip(r.Offenses[0], attempt); q != "" {
 			out = append(out, q)
 		}
+	}
+	if ps := r.Protect; ps != nil && ps.Blocked > 0 && !attempt {
+		out = append(out, fmt.Sprintf("tattlr blocked %s before %s ran.", plural(ps.Blocked, "call"), map[bool]string{true: "it", false: "they"}[ps.Blocked == 1]))
 	}
 	return out
 }
 
-func quip(o scan.Offense) string {
-	n := o.Count
-	times := plural(n, "time")
+// onlyAttempts reports whether every worst moment that tripped rule was
+// blocked by the live hook, so a quip should not claim it happened.
+func onlyAttempts(r *scan.Result, rule string) bool {
+	seen := false
+	for _, m := range r.Moments {
+		for _, id := range m.Rules {
+			if id == rule {
+				if !m.Blocked {
+					return false
+				}
+				seen = true
+			}
+		}
+	}
+	return seen
+}
+
+func quip(o scan.Offense, blocked bool) string {
+	if blocked {
+		return fmt.Sprintf("Worst attempt: %s. Blocked before it ran.", strings.ToLower(o.Title[:1])+o.Title[1:])
+	}
+	times := timesWord(o.Count)
 	switch o.Rule {
 	case "canary":
 		return fmt.Sprintf("The fake keys got read %s. Nobody asked for them.", times)
@@ -289,6 +310,16 @@ func quip(o scan.Offense) string {
 		return fmt.Sprintf("Force pushed %s. Hope it was your branch.", times)
 	}
 	return ""
+}
+
+func timesWord(n int) string {
+	switch n {
+	case 1:
+		return "once"
+	case 2:
+		return "twice"
+	}
+	return fmt.Sprintf("%d times", n)
 }
 
 func plural(n int, word string) string {
