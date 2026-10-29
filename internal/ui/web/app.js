@@ -2,8 +2,9 @@
 "use strict";
 
 const csrf = document.querySelector('meta[name="csrf"]').content;
-const AGENTS = { claude: "Claude Code", codex: "Codex", cursor: "Cursor", gemini: "Gemini CLI", openclaw: "OpenClaw" };
-const S = { entries: [], pending: [], filter: "all", agent: "", rap: null, skew: 0 };
+const AGENTS = { claude: "Claude Code", "claude-code": "Claude Code", codex: "Codex", cursor: "Cursor",
+  gemini: "Gemini CLI", "gemini-cli": "Gemini CLI", openclaw: "OpenClaw" };
+const S = { entries: [], pending: [], filter: "all", agent: "", rap: null, skew: 0, home: "" };
 
 function h(tag, props, ...kids) {
   const el = document.createElement(tag);
@@ -11,6 +12,7 @@ function h(tag, props, ...kids) {
     if (v == null || v === false) continue;
     if (k === "class") el.className = v;
     else if (k === "text") el.textContent = v;
+    else if (k === "css") Object.assign(el.style, v); // CSSOM, allowed by the CSP (inline style= is not)
     else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
     else el.setAttribute(k, v);
   }
@@ -27,7 +29,13 @@ const firstSentence = (s) => {
   const i = s.search(/\.(\s|$)/);
   return i > 0 ? s.slice(0, i) : s;
 };
-const tilde = (p) => (p || "").replace(/^\/(home|Users)\/[^/]+/, "~");
+function tilde(p) {
+  p = p || "";
+  if (S.home && (p === S.home || p.startsWith(S.home + "/"))) return "~" + p.slice(S.home.length);
+  return p.replace(/^\/(home|Users)\/[^/]+/, "~");
+}
+// Shorter evidence: the home folder anywhere in a command becomes ~.
+const short = (s) => (S.home ? (s || "").split(S.home + "/").join("~/") : s || "");
 const clock = (t) => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 function ago(t) {
   const s = Math.max(0, (Date.now() - new Date(t)) / 1000);
@@ -62,12 +70,12 @@ function keep(e) {
 // ---------- header ----------
 function renderPolicy(st) {
   const p = $("policy");
-  p.replaceChildren(
+  p.replaceChildren(...[
     h("span", { class: "pill mode-" + st.mode, text: st.mode + " mode" }),
     h("span", { class: "pill", text: st.approval_timeout > 0 ? "inbox waits " + st.approval_timeout + "s" : "inbox off" }),
     h("span", { class: "pill", text: st.notify ? "notify on" : "notify off" }),
     st.policy_error ? h("span", { class: "pill warn", title: st.policy_error, text: "policy error" }) : null,
-  );
+  ].filter(Boolean));
 }
 
 function renderStats() {
@@ -122,7 +130,7 @@ function renderInbox() {
         h("span", { class: "who", text: agentName(p.agent) }),
         h("span", { class: "what", text: "wants to run " + (p.tool || "a tool") }),
         h("span", { class: "left" })),
-      h("div", { class: "ev", text: p.evidence || "(no details)" }),
+      h("div", { class: "ev", text: short(p.evidence) || "(no details)" }),
       h("p", { class: "why", text: [firstSentence(p.reason), tilde(p.cwd)].filter(Boolean).join("  ·  ") }),
       h("div", { class: "acts" },
         h("button", { class: "btn deny", text: "Deny", onclick: () => decide(p.id, "deny", card) }),
@@ -156,7 +164,7 @@ function row(e, fresh) {
         e.tool ? h("span", { class: "tool", text: e.tool }) : null,
         e.severity ? h("span", { class: "sev " + e.severity, text: e.severity }) : null,
         title ? h("span", { class: "title", text: title }) : null),
-      e.evidence ? h("div", { class: "cmd", title: e.evidence, text: e.evidence }) : null,
+      e.evidence ? h("div", { class: "cmd", title: e.evidence, text: short(e.evidence) }) : null,
       h("div", { class: "meta", text: [tilde(e.cwd), e.mode && e.mode + " mode", e.tainted && "touched a canary", e.error].filter(Boolean).join("  ·  ") })));
 }
 
@@ -175,7 +183,8 @@ function renderTimeline(freshCount) {
 
 // ---------- rap sheet ----------
 function sevColor(score) {
-  return score >= 70 ? "var(--red)" : score >= 40 ? "var(--orange)" : score >= 15 ? "var(--yellow)" : "var(--green)";
+  // Same bands as the terminal rap sheet. Scores are summed severity weights, with no ceiling.
+  return score >= 120 ? "var(--red)" : score >= 50 ? "var(--orange)" : score >= 15 ? "var(--yellow)" : "var(--green)";
 }
 
 async function loadRap(fresh) {
@@ -197,8 +206,8 @@ function renderRap() {
   const parts = [
     h("div", { class: "rap-head" },
       h("div", { class: "score" },
-        h("div", { class: "big", style: "color:" + sevColor(r.score), text: r.score }),
-        h("div", { class: "of", text: "out of 100" }),
+        h("div", { class: "big", css: { color: sevColor(r.score) }, text: r.score }),
+        h("div", { class: "of", text: "rap sheet points" }),
         h("div", { class: "verdict", text: r.verdict })),
       h("div", { class: "facts" },
         fact(r.sessions, "sessions"), fact(r.tool_calls, "tool calls"),
@@ -208,11 +217,12 @@ function renderRap() {
     h("button", { class: "btn refresh", text: "Rescan", onclick: () => loadRap(true) }),
     h("h3", { text: "Agents" }));
   if (!r.agents.length) agents.append(h("p", { class: "empty", text: "No agent logs found on this machine." }));
+  const worst = Math.max(1, ...r.agents.map((a) => a.score));
   for (const a of r.agents) {
     agents.append(h("div", { class: "arow" },
       h("b", { text: agentName(a.agent) }),
-      h("div", { class: "meter" }, h("i", { style: "width:" + Math.max(2, a.score) + "%;background:" + sevColor(a.score) })),
-      h("span", { class: "dim", text: a.score + "/100" }),
+      h("div", { class: "meter" }, h("i", { css: { width: Math.max(2, (100 * a.score) / worst) + "%", background: sevColor(a.score) } })),
+      h("span", { class: "dim", text: a.score + " pts" }),
       h("span", { class: "dim", text: a.flagged_calls + " of " + a.tool_calls + " calls flagged" })));
   }
   parts.push(agents);
@@ -230,7 +240,7 @@ function renderRap() {
           h("span", { class: "sev " + m.severity, text: m.severity }),
           h("span", { class: "agent", text: agentName(m.agent) }),
           h("span", { class: "title", text: (m.titles || []).join(", ") })),
-        h("div", { class: "cmd", title: m.evidence, text: m.evidence }),
+        h("div", { class: "cmd", title: m.evidence, text: short(m.evidence) }),
         h("div", { class: "meta", text: [tilde(m.project), m.time && new Date(m.time).toLocaleString()].filter(Boolean).join("  ·  ") })))));
   }
   $("rap").replaceChildren(...parts);
@@ -242,8 +252,10 @@ function show(view) {
   $("view-timeline").hidden = view !== "timeline";
   $("view-rap").hidden = view !== "rap";
   if (view === "rap" && !S.rap) loadRap(false);
-  history.replaceState(null, "", view === "rap" ? "#rap" : "#");
+  const want = view === "rap" ? "#rap" : "";
+  if (location.hash !== want) history.replaceState(null, "", want || location.pathname);
 }
+window.addEventListener("hashchange", () => show(location.hash === "#rap" ? "rap" : "timeline"));
 for (const t of document.querySelectorAll(".tab")) t.addEventListener("click", () => show(t.dataset.view));
 for (const c of document.querySelectorAll(".chip")) {
   c.addEventListener("click", () => {
@@ -259,6 +271,7 @@ async function loadState() {
   if (r.status === 401) { location.reload(); return; }
   const st = await r.json();
   S.skew = st.now - Date.now();
+  S.home = st.home || "";
   S.entries = st.entries;
   S.pending = st.pending;
   renderPolicy(st);

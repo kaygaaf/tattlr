@@ -351,3 +351,20 @@ func TestOnlyLoopback(t *testing.T) {
 		t.Errorf("listening on %s", a)
 	}
 }
+
+// The CSP has no 'unsafe-inline' for styles, so a style="" attribute set from
+// app.js is silently dropped by the browser. Styles go through the CSSOM (the
+// css prop in h()) instead.
+func TestNoInlineStyleAttributes(t *testing.T) {
+	js, err := webFS.ReadFile("web/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(js, []byte(`style: "`)) || bytes.Contains(js, []byte(`setAttribute("style"`)) {
+		t.Fatal("app.js sets an inline style attribute; the CSP blocks it, use the css prop")
+	}
+	html, _ := webFS.ReadFile("web/index.html")
+	if bytes.Contains(html, []byte(" style=")) || bytes.Contains(html, []byte("<script>")) {
+		t.Fatal("index.html has inline style or script")
+	}
+}

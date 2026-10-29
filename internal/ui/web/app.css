@@ -125,7 +125,7 @@ select { background: var(--panel); color: var(--text); border: 1px solid var(--l
 .facts .l { color: var(--dim); font-size: 12px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 4px 0; margin-bottom: 16px; }
 .card h3 { margin: 0; padding: 12px 18px 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .7px; color: var(--dim); }
-.arow { display: grid; grid-template-columns: 140px 1fr 70px 130px; gap: 14px; padding: 10px 18px; border-top: 1px solid var(--line); align-items: center; }
+.arow { display: grid; grid-template-columns: 140px 1fr 70px 170px; gap: 14px; padding: 10px 18px; border-top: 1px solid var(--line); align-items: center; }
 .meter { height: 7px; border-radius: 4px; background: var(--panel2); overflow: hidden; }
 .meter i { display: block; height: 100%; border-radius: 4px; }
 .orow { display: grid; grid-template-columns: 80px 1fr auto; gap: 14px; padding: 9px 18px; border-top: 1px solid var(--line); align-items: center; }

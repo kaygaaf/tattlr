@@ -296,7 +296,7 @@ func (s *Server) state(w http.ResponseWriter, _ *http.Request) {
 	}
 	out := map[string]any{
 		"mode": pol.Mode, "approval_timeout": int(pol.ApprovalTimeout / time.Second), "notify": pol.Notify,
-		"entries": es, "pending": s.pendingList(), "stats": Stats(es, s.o.Now()), "now": s.o.Now().UnixMilli(),
+		"entries": es, "pending": s.pendingList(), "stats": Stats(es, s.o.Now()), "home": s.o.Home, "now": s.o.Now().UnixMilli(),
 	}
 	if perr != nil {
 		out["policy_error"] = perr.Error()
