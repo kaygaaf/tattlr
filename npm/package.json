@@ -1,0 +1,33 @@
+{
+  "name": "tattlr",
+  "version": "0.1.0",
+  "description": "Tells on your AI coding agents. Reads their logs, blocks the sketchy stuff live.",
+  "license": "MIT",
+  "author": "Kayorama",
+  "homepage": "https://github.com/kaygaaf/tattlr",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kaygaaf/tattlr.git",
+    "directory": "npm"
+  },
+  "bugs": "https://github.com/kaygaaf/tattlr/issues",
+  "keywords": ["claude-code", "codex", "gemini-cli", "ai-agents", "security", "audit", "cli"],
+  "bin": {
+    "tattlr": "bin/tattlr.js"
+  },
+  "files": ["bin", "lib", "README.md"],
+  "engines": {
+    "node": ">=18"
+  },
+  "optionalDependencies": {
+    "tattlr-darwin-arm64": "0.1.0",
+    "tattlr-darwin-x64": "0.1.0",
+    "tattlr-linux-arm64": "0.1.0",
+    "tattlr-linux-x64": "0.1.0",
+    "tattlr-win32-arm64": "0.1.0",
+    "tattlr-win32-x64": "0.1.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}

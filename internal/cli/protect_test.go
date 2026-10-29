@@ -48,3 +48,15 @@ func TestProtectCommands(t *testing.T) {
 		t.Error("settings.json left behind")
 	}
 }
+
+func TestTempBin(t *testing.T) {
+	if tempBin("/home/kay/.npm/_npx/1a2b/node_modules/tattlr-linux-x64/bin/tattlr") == "" {
+		t.Error("npx cache path should warn")
+	}
+	if tempBin(filepath.Join(os.TempDir(), "x", "tattlr")) == "" {
+		t.Error("temp dir path should warn")
+	}
+	if got := tempBin("/home/kay/.local/bin/tattlr"); got != "" {
+		t.Errorf("normal install warned: %s", got)
+	}
+}

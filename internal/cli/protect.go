@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -93,6 +94,10 @@ func runProtect(args []string, env Env) int {
 		if b == "" {
 			err = errors.New("can't tell where the tattlr binary is; pass --bin")
 			break
+		}
+		if why := tempBin(b); why != "" {
+			fmt.Fprintf(env.Stderr, "tattlr: warning: %s, so the hooks may stop working when it gets cleaned up.\n"+
+				"  Install it for good first (npm i -g tattlr, brew install kaygaaf/tap/tattlr, or install.sh), then rerun this.\n", why)
 		}
 		err = protect.Install(o)
 		if err == nil {
@@ -200,4 +205,17 @@ func plural(n int, word string) string {
 		return "1 " + word
 	}
 	return fmt.Sprintf("%d %ss", n, word)
+}
+
+// tempBin says why a binary path looks short lived, like one npx unpacked,
+// or "" if it looks fine. Hooks keep the path, so it has to stay put.
+func tempBin(bin string) string {
+	b := filepath.ToSlash(bin)
+	switch {
+	case strings.Contains(b, "/_npx/"):
+		return "this tattlr is running from the npx cache (" + bin + ")"
+	case strings.HasPrefix(b, filepath.ToSlash(os.TempDir())+"/"):
+		return "this tattlr is running from a temp folder (" + bin + ")"
+	}
+	return ""
 }
