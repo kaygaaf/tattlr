@@ -89,7 +89,7 @@ func TestClaudeRoundTrip(t *testing.T) {
 	if len(baks) != 1 || read(t, baks[0]) != claudeExisting {
 		t.Errorf("backups: %v", baks)
 	}
-	if fi, _ := os.Stat(p); fi.Mode().Perm() != 0o644 {
+	if fi, _ := os.Stat(p); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o644 { // no Unix modes on Windows
 		t.Errorf("mode changed to %v", fi.Mode().Perm())
 	}
 	if _, err := os.Stat(config.PolicyPath(home)); err != nil {
@@ -130,7 +130,7 @@ func TestClaudeFreshFileIsDeletedOnUninstall(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := filepath.Join(home, ".claude", "settings.json")
-	if fi, err := os.Stat(p); err != nil || fi.Mode().Perm() != 0o600 {
+	if fi, err := os.Stat(p); err != nil || runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 { // no Unix modes on Windows
 		t.Fatalf("settings.json not created 0600: %v", err)
 	}
 	if err := Uninstall(o); err != nil {
