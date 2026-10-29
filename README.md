@@ -20,17 +20,11 @@ Works with Claude Code, Codex CLI, Gemini CLI, OpenClaw and Cursor. No account, 
 
 ## Install
 
-Pick one. They all give you the same single binary.
+Pick one. Both give you the same single binary.
 
 ```sh
 # script: downloads the release for your OS, checks its sha256, puts it in ~/.local/bin
 curl -fsSL https://raw.githubusercontent.com/kaygaaf/tattlr/main/install.sh | sh
-
-# Homebrew (macOS and Linux)
-brew install kaygaaf/tap/tattlr
-
-# npm (no postinstall script; the binary comes as a per-platform package)
-npm i -g tattlr
 
 # Go 1.22 or newer
 go install github.com/kaygaaf/tattlr/cmd/tattlr@latest
@@ -40,7 +34,17 @@ Or grab an archive from the [releases page](https://github.com/kaygaaf/tattlr/re
 
 The script is short, so read it first if piping into `sh` makes you twitchy (it should, that's one of the rules). `TATTLR_VERSION=v0.1.0` pins a version and `TATTLR_INSTALL_DIR=/usr/local/bin` changes where it goes.
 
-`npx tattlr` works for a quick scan. For `tattlr protect`, install it for real, since the hooks remember where the binary lives and the npx cache gets cleaned up.
+**Coming soon, not live yet:** Homebrew and npm. These lines won't work until they're up:
+
+```sh
+# Homebrew (macOS and Linux), coming soon
+brew install kaygaaf/tap/tattlr
+
+# npm, coming soon (no postinstall script; the binary comes as a per-platform package)
+npm i -g tattlr
+```
+
+Once npm is live, `npx tattlr` will work for a quick scan. For `tattlr protect`, install it for real, since the hooks remember where the binary lives and the npx cache gets cleaned up.
 
 ## Use it
 
