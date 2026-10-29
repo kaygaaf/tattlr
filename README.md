@@ -30,6 +30,7 @@ tattlr rules                  # list every rule and its severity
 tattlr trap                   # plant fake credentials as bait
 tattlr protect install        # block things live (see below)
 tattlr protect status         # what's hooked up and what got stopped
+tattlr ui                     # live timeline and approval inbox in your browser
 ```
 
 ## What it looks like
@@ -183,6 +184,8 @@ rules:                 # per rule: allow, ask or deny
   rm-rf: allow
 
 canary_reads: allow    # see below
+approval_timeout: 30s  # how long Codex and Cursor wait for you in tattlr ui (0 turns it off)
+notify: false          # desktop notification when something gets blocked
 
 allow:                 # things you trust (globs)
   commands:
@@ -195,9 +198,13 @@ allow:                 # things you trust (globs)
 - **protect** does what the policy says.
 - **strict** denies anything high or critical, asks on medium, and blocks the call if the tattlr hook itself crashes or times out.
 
-"ask" means the agent's own approval prompt pops up, where the agent has one. Where it doesn't, the call is denied with a reason, so the agent can tell you what it wanted.
+"ask" means the agent's own approval prompt pops up, where the agent has one. Codex and Cursor's file events don't have one. For those, if `tattlr ui` is open, the call waits in its inbox for you to click approve or deny (see below). If the UI isn't running, or you don't answer in time, the call is denied with a reason, so the agent can tell you what it wanted.
 
 If the policy file is broken, tattlr falls back to the built-in default and says so on stderr. Outside strict mode, a crash in tattlr lets the call through instead of breaking your agent.
+
+### Desktop notifications
+
+Set `notify: true` and tattlr pops a notification when it blocks something, or when a call is waiting for you in the inbox. It uses `notify-send` on Linux, `osascript` on macOS and a PowerShell toast on Windows. It never waits on the notification, and if none of those exist it just skips it. The text is the rule and the command with secrets masked, same as the audit log.
 
 ### Canaries plus protect
 
@@ -226,7 +233,8 @@ Every checked call goes to `~/.local/state/tattlr/audit.jsonl`, one JSON line ea
 - Cursor can also run Claude Code's hooks ("third party hooks"). If you have both installed, a call in Cursor may get checked twice. The answer is the same, it just shows up twice in the audit log.
 - I haven't confirmed whether tattlr answering allow also skips Cursor's own approval prompt. If it does, calls tattlr lets through don't get a second look from Cursor.
 - Cursor user hooks don't run in Cursor's cloud agents.
-- Codex can't ask, and its built-in web search runs on OpenAI's side, so no hook sees it.
+- Codex can't ask on its own, and its built-in web search runs on OpenAI's side, so no hook sees it.
+- The approval inbox only works while `tattlr ui` is running. The hook doesn't start it for you.
 - strict mode's "block if tattlr fails" setting is written at install time. If you switch to or from strict, run `tattlr protect install` again.
 - The OpenClaw plugin follows OpenClaw's plugin docs, but I haven't run it inside a live gateway yet.
 - Gemini CLI lets a call through if a hook crashes or times out, so strict mode's "block if tattlr fails" can't be enforced there. tattlr still blocks in strict mode when it runs and can't read the request.
@@ -234,6 +242,34 @@ Every checked call goes to `~/.local/state/tattlr/audit.jsonl`, one JSON line ea
 - Gemini CLI also has its own TOML policy engine. tattlr doesn't write policies for it; the hook is enough.
 - I checked the Gemini hook contract against the docs and the source, including `ask`, which the source supports but the docs don't mention yet. I haven't run it against a signed-in Gemini CLI.
 - Hooks only see what the agent reports. A tool that spawns its own subprocesses can still do things tattlr never hears about. Scan the logs too.
+
+## The web UI: tattlr ui
+
+```sh
+tattlr ui            # http://127.0.0.1:7477
+tattlr ui --open     # and open it in your browser
+tattlr ui --port 0   # any free port
+```
+
+![tattlr ui with a Codex git reset waiting for an OK](docs/ui.png)
+
+It shows every hook decision from the audit log as it happens, with filters for stopped, asked and would block. The rap sheet tab is the same thing `tattlr scan` prints, as a page:
+
+![the rap sheet tab](docs/ui-rapsheet.png)
+
+The part I actually wanted is the inbox. Codex can't ask you anything, and neither can Cursor for file reads and edits, so normally an "ask" there just becomes a deny. With `tattlr ui` running, the hook holds the call and it shows up at the top of the page with a countdown. Approve and the agent carries on. Deny, or let it run out, and the policy decides like it would have anyway. The wait is `approval_timeout` in your policy (30 seconds by default, 10 minutes at most). Claude Code, Gemini CLI, OpenClaw and Cursor's shell and MCP calls keep using their own prompts.
+
+The hook timeout written into the Codex and Cursor config is 10 seconds plus that wait, so run `tattlr protect install` again after you change `approval_timeout`.
+
+How it stays yours:
+
+- It only listens on 127.0.0.1, and refuses requests whose Host isn't `127.0.0.1` or `localhost`, so a random website can't reach it through DNS tricks.
+- Every run makes a fresh random login token. The URL it prints logs you in once with it and sets a strict same-site cookie. Without the cookie you get nothing.
+- Approve and deny need that cookie, a CSRF token from the page, an Origin header of the UI itself and a JSON body. A form on some other site can't fake that.
+- Hooks talk to it with a separate secret from `~/.local/state/tattlr/ui.json` (only readable by you). Each request is signed and used once, and the answer comes back signed too, so nothing else can pretend to be the UI or replay an old approve.
+- Everything is built into the binary. No CDN, no fonts from elsewhere, a strict Content Security Policy and no inline scripts.
+
+Only one `tattlr ui` runs at a time. Ctrl+C stops it and the hooks go back to their normal behavior straight away.
 
 ## Supported agents
 
@@ -254,7 +290,6 @@ Everything happens on your machine. tattlr reads log files, prints a report and 
 ## Roadmap
 
 - An MCP proxy for tools that have no hooks
-- Desktop approval prompts for agents that can't ask
 - OpenClaw and Cursor SQLite session stores, more rules and a `--watch` mode
 
 ## Development
@@ -265,6 +300,7 @@ go vet ./...
 golangci-lint run
 python3 scripts/gen_fixtures.py   # regenerate testdata/home
 scripts/demo.sh                   # the prompt injection demo, in a temp HOME
+scripts/ui-shot.sh                # re-make docs/ui.png (needs Chrome and Node 20+)
 vhs scripts/demo.tape             # re-record docs/demo.gif (needs VHS)
 ```
 
