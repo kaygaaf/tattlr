@@ -11,14 +11,14 @@ Require bash
 Set Shell "bash"
 Set FontSize 15
 Set Width 1280
-Set Height 820
+Set Height 860
 Set Padding 18
 Set TypingSpeed 35ms
 Set Theme "Catppuccin Mocha"
 Set WindowBar Colorful
 
 Hide
-Type "unset NO_COLOR FORCE_COLOR; export TERM=xterm-256color TATTLR=/tmp/tattlr DEMO_PACE=1.2 PS1='$ '"
+Type "unset NO_COLOR FORCE_COLOR; export TERM=xterm-256color TATTLR=/tmp/tattlr DEMO_PACE=1.4 PS1='$ '"
 Enter
 Type "clear"
 Enter
@@ -27,4 +27,5 @@ Show
 Type "scripts/demo.sh"
 Sleep 500ms
 Enter
-Sleep 45s
+Sleep 23s
+Sleep 3s
