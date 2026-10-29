@@ -7,8 +7,11 @@
 // Assistant content holds {type:"toolCall", id, name, arguments} blocks, and
 // results come back as role "toolResult" messages with toolCallId.
 //
-// Newer OpenClaw builds keep live transcripts in a per-agent SQLite database
-// (agent/openclaw-agent.sqlite). tattlr does not read SQLite yet.
+// Newer OpenClaw builds (2026.10 and later) keep live transcripts in a
+// per-agent SQLite database, agents/<agent>/agent/openclaw-agent.sqlite, one
+// row per line in transcript_events. The rows hold the same JSON objects, so
+// each session there shows up as "<db>#<session id>" and goes through the
+// same line handler. See sqlite.go.
 package openclaw
 
 import (
@@ -33,7 +36,13 @@ func (Parser) Discover(home string) []string {
 			base = dir
 		}
 	}
-	return jsonl.Walk(filepath.Join(base, "agents"), func(p string) bool {
+	root := filepath.Join(base, "agents")
+	var dbs []string
+	files := jsonl.Walk(root, func(p string) bool {
+		if filepath.Base(p) == dbName && filepath.Base(filepath.Dir(p)) == "agent" {
+			dbs = append(dbs, p)
+			return false
+		}
 		if filepath.Base(filepath.Dir(p)) != "sessions" {
 			return false
 		}
@@ -43,12 +52,21 @@ func (Parser) Discover(home string) []string {
 		}
 		return strings.HasSuffix(b, ".jsonl") || strings.Contains(b, ".jsonl.reset.") || strings.Contains(b, ".jsonl.deleted.")
 	})
+	for _, db := range dbs {
+		files = append(files, dbSessions(db)...)
+	}
+	return files
 }
 
 func (Parser) Parse(path string) (*event.Session, error) {
 	s := &event.Session{Agent: event.AgentOpenClaw, Source: path}
 	idx := map[string]int{}
-	err := jsonl.EachLine(path, func(m map[string]any) {
+	each := jsonl.EachLine
+	db, sid, inDB := splitDBPath(path)
+	if inDB {
+		each = func(_ string, fn func(map[string]any)) error { return dbEvents(db, sid, fn) }
+	}
+	err := each(path, func(m map[string]any) {
 		ts := jsonl.Time(m["timestamp"])
 		switch jsonl.Str(m, "type") {
 		case "session":
@@ -89,10 +107,18 @@ func (Parser) Parse(path string) (*event.Session, error) {
 	})
 	if s.ID == "" {
 		s.ID = strings.SplitN(filepath.Base(path), ".", 2)[0]
+		if inDB {
+			s.ID = sid
+		}
 	}
 	if s.Project == "" {
-		// agents/<agent>/sessions/<file>: use the agent name.
-		s.Project = "openclaw:" + filepath.Base(filepath.Dir(filepath.Dir(path)))
+		// agents/<agent>/sessions/<file> or agents/<agent>/agent/<db>:
+		// use the agent name.
+		dir := path
+		if inDB {
+			dir = db
+		}
+		s.Project = "openclaw:" + filepath.Base(filepath.Dir(filepath.Dir(dir)))
 	}
 	for i := range s.Events {
 		s.Events[i].SessionID = s.ID
