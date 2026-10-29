@@ -33,6 +33,41 @@ archives:
 
 checksum:
   name_template: checksums.txt
+  algorithm: sha256
+
+release:
+  github:
+    owner: kaygaaf
+    name: tattlr
+  draft: true
+
+# brew install kaygaaf/tap/tattlr
+# Needs a kaygaaf/homebrew-tap repo and a HOMEBREW_TAP_TOKEN secret with
+# write access to it. Without the token the cask is only written to dist/.
+homebrew_casks:
+  - name: tattlr
+    binaries: [tattlr]
+    homepage: https://github.com/kaygaaf/tattlr
+    description: "Tells on your AI coding agents. Reads their logs, blocks the sketchy stuff live."
+    license: MIT
+    directory: Casks
+    skip_upload: '{{ if index .Env "HOMEBREW_TAP_TOKEN" }}false{{ else }}true{{ end }}'
+    repository:
+      owner: kaygaaf
+      name: homebrew-tap
+      token: '{{ index .Env "HOMEBREW_TAP_TOKEN" }}'
+    commit_author:
+      name: Kayorama
+      email: 13423277+kaygaaf@users.noreply.github.com
+    commit_msg_template: "tattlr {{ .Tag }}"
+    # The binary is not notarized, so drop the quarantine flag or macOS says
+    # it is damaged.
+    hooks:
+      post:
+        install_steps: |
+          on_macos do
+            run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}/tattlr"]
+          end
 
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
