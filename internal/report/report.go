@@ -73,22 +73,34 @@ func Text(w io.Writer, r *scan.Result, o TextOptions) {
 	bold := func(s string) string { return p.c("1", s) }
 	dim := func(s string) string { return p.c("2", s) }
 
+	if r.ToolCalls == 0 && r.Protect == nil && r.Logs == 0 {
+		Welcome(w, r.HomeDir(), o.Color)
+		return
+	}
+
 	fmt.Fprintln(w)
-	fmt.Fprintf(w, " %s  %s\n", p.c("1;97;41", " TATTLR "), bold("RAP SHEET"))
-	fmt.Fprintf(w, " %s\n", dim(summaryLine(r, o.Loc)))
+	fmt.Fprintf(w, " %s  %s  %s\n", p.c("1;97;41", " TATTLR "), bold("RAP SHEET"), dim(summaryLine(r, o.Loc, false)))
 	fmt.Fprintln(w)
 
 	if r.ToolCalls == 0 {
 		protectSection(w, r, o, p)
-		if r.Protect != nil {
+		switch {
+		case r.Protect != nil && r.Logs == 0:
 			fmt.Fprintln(w, " No agent session logs found, only the live hook log above.")
-		} else {
-			fmt.Fprintln(w, " No agent activity found. Either your agents are saints or tattlr looked in the wrong place.")
+		case r.Logs > 0:
+			fmt.Fprintln(w, " Nothing matched. Try dropping --since, --agent or --project.")
+		default:
+			fmt.Fprintln(w, " No agent activity found.")
 		}
 		fmt.Fprintln(w, dim(" Looked for Claude Code, Codex, Gemini CLI, OpenClaw and Cursor logs under "+tilde(r.HomeDir(), r.HomeDir())))
 		fmt.Fprintln(w)
 		return
 	}
+
+	for _, line := range headline(r) {
+		fmt.Fprintf(w, " %s\n", line)
+	}
+	fmt.Fprintln(w)
 
 	// Per-agent table.
 	fmt.Fprintf(w, " %s\n", bold(fmt.Sprintf("%-13s %8s %6s %8s %5s %5s %5s %5s %6s  %s",
@@ -118,8 +130,6 @@ func Text(w io.Writer, r *scan.Result, o TextOptions) {
 	protectSection(w, r, o, p)
 
 	if len(r.Offenses) == 0 {
-		fmt.Fprintln(w, p.c("32", " Nothing risky found. Suspiciously well behaved."))
-		fmt.Fprintln(w)
 		return
 	}
 
@@ -149,7 +159,7 @@ func Text(w io.Writer, r *scan.Result, o TextOptions) {
 			proj = "unknown project"
 		}
 		fmt.Fprintf(w, " %s  %s  %s  %s\n", p.sev(m.Severity, sevLabel[m.Severity]), when, bold(e.Agent), dim(proj))
-		titles := strings.Join(m.Titles, ", ")
+		titles := joinFit(m.Titles, o.Width-7)
 		if m.Blocked {
 			titles += p.c("1;32", "  (tried it, tattlr blocked it)")
 		}
@@ -157,7 +167,9 @@ func Text(w io.Writer, r *scan.Result, o TextOptions) {
 		fmt.Fprintf(w, "       %s\n", p.c("36", clip(tilde(m.Evidence, r.HomeDir()), o.Width-7)))
 	}
 	fmt.Fprintln(w)
-	fmt.Fprintf(w, " %s\n", dim(footer(r)))
+	for _, line := range footer(r) {
+		fmt.Fprintf(w, " %s\n", dim(line))
+	}
 	fmt.Fprintln(w)
 }
 
@@ -199,11 +211,10 @@ func protectSection(w io.Writer, r *scan.Result, o TextOptions, p painter) {
 	fmt.Fprintln(w)
 }
 
-func summaryLine(r *scan.Result, loc *time.Location) string {
-	parts := []string{
-		plural(r.Sessions, "session"),
-		plural(r.ToolCalls, "tool call"),
-		plural(r.Flagged, "flagged call"),
+func summaryLine(r *scan.Result, loc *time.Location, flagged bool) string {
+	parts := []string{plural(r.Sessions, "session"), plural(r.ToolCalls, "tool call")}
+	if flagged {
+		parts = append(parts, plural(r.Flagged, "flagged call"))
 	}
 	if !r.First.IsZero() {
 		a, b := r.First.In(loc), r.Last.In(loc)
@@ -219,17 +230,65 @@ func summaryLine(r *scan.Result, loc *time.Location) string {
 	return strings.Join(parts, ", ")
 }
 
-func footer(r *scan.Result) string {
-	s := fmt.Sprintf("Read %s locally. Nothing left this machine. Secrets in commands are masked.", plural(r.Logs, "log file"))
-	if r.Canaries == 0 {
-		s += " Tip: run `tattlr trap` to plant fake keys and catch snoops."
-	} else {
-		s += fmt.Sprintf(" %s planted.", plural(r.Canaries, "canary"))
+// footer is the privacy note plus at most one nudge, so the end of the
+// sheet stays short.
+func footer(r *scan.Result) []string {
+	out := []string{fmt.Sprintf("Read %s on this machine. Nothing was uploaded. Secrets in commands are masked.", plural(r.Logs, "log file"))}
+	switch {
+	case r.Protect == nil:
+		out = append(out, "Next: `tattlr protect install` blocks this stuff before it runs. YOLO mode stays on.")
+	case r.Canaries == 0:
+		out = append(out, "Next: `tattlr trap` plants fake keys, so a snooping agent gets caught in the act.")
+	default:
+		out = append(out, "Share it: `tattlr scan --card card.png` makes an image with no paths or commands on it.")
 	}
-	if r.Protect == nil {
-		s += " Run `tattlr protect install` to block this stuff live."
+	return out
+}
+
+// headline is the one or two lines people screenshot: who is worst and the
+// worst thing that happened. Dry on purpose.
+func headline(r *scan.Result) []string {
+	if r.Flagged == 0 {
+		return []string{fmt.Sprintf("%s, nothing sketchy. Suspiciously well behaved.", plural(r.ToolCalls, "tool call"))}
 	}
-	return s
+	out := []string{fmt.Sprintf("%d of %s looked sketchy.", r.Flagged, plural(r.ToolCalls, "tool call"))}
+	if len(r.Agents) > 0 && r.Agents[0].Score > 0 {
+		a := r.Agents[0]
+		out[0] += fmt.Sprintf(" Most wanted: %s (%s).", a.Agent, a.Verdict)
+	}
+	if ps := r.Protect; ps != nil && ps.Blocked > 0 {
+		out[0] += fmt.Sprintf(" tattlr blocked %d live.", ps.Blocked)
+	}
+	if len(r.Offenses) > 0 {
+		if q := quip(r.Offenses[0]); q != "" {
+			out = append(out, q)
+		}
+	}
+	return out
+}
+
+func quip(o scan.Offense) string {
+	n := o.Count
+	times := plural(n, "time")
+	switch o.Rule {
+	case "canary":
+		return fmt.Sprintf("The fake keys got read %s. Nobody asked for them.", times)
+	case "tainted-egress":
+		return "Something read the fake keys and then went online. Bold."
+	case "exfil":
+		return fmt.Sprintf("Secrets got sent over the network %s.", times)
+	case "remote-code":
+		return fmt.Sprintf("curl | sh happened %s.", times)
+	case "disk-wipe":
+		return "Something pointed dd at a disk. Check your backups, then your agent."
+	case "self-protect":
+		return "Something tried to switch tattlr off. Noted."
+	case "secret-read":
+		return fmt.Sprintf("Secret files got opened %s.", times)
+	case "git-force-push":
+		return fmt.Sprintf("Force pushed %s. Hope it was your branch.", times)
+	}
+	return ""
 }
 
 func plural(n int, word string) string {
@@ -258,6 +317,28 @@ func tilde(s, home string) string {
 		}
 	}
 	return homeRe.ReplaceAllString(s, "${1}~${2}")
+}
+
+// joinFit joins titles with commas and swaps whatever does not fit in n
+// columns for "+N more", so lines never wrap mid word.
+func joinFit(titles []string, n int) string {
+	out := ""
+	for i, t := range titles {
+		next := t
+		if out != "" {
+			next = out + ", " + t
+		}
+		rest := len(titles) - i - 1
+		budget := n
+		if rest > 0 {
+			budget -= len(fmt.Sprintf(" +%d more", rest))
+		}
+		if utf8.RuneCountInString(next) > budget && out != "" {
+			return fmt.Sprintf("%s +%d more", out, len(titles)-i)
+		}
+		out = next
+	}
+	return out
 }
 
 func clip(s string, n int) string {

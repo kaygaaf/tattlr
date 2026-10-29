@@ -54,8 +54,50 @@ func TestText(t *testing.T) {
 func TestTextEmpty(t *testing.T) {
 	var b bytes.Buffer
 	Text(&b, &scan.Result{Home: "/home/x"}, TextOptions{})
-	if !strings.Contains(b.String(), "No agent activity") {
+	out := b.String()
+	for _, want := range []string{"Nothing to tell on yet", "tattlr trap", "tattlr protect install", "tattlr scan", "under ~."} {
+		if !strings.Contains(out, want) {
+			t.Errorf("welcome missing %q:\n%s", want, out)
+		}
+	}
+	for _, line := range strings.Split(out, "\n") {
+		if n := len([]rune(line)); n > 80 {
+			t.Errorf("welcome line is %d columns: %q", n, line)
+		}
+	}
+}
+
+func TestTextFilteredOut(t *testing.T) {
+	var b bytes.Buffer
+	Text(&b, &scan.Result{Home: "/home/x", Logs: 3}, TextOptions{})
+	if !strings.Contains(b.String(), "Nothing matched") {
 		t.Error(b.String())
+	}
+}
+
+func TestHeadline(t *testing.T) {
+	r := result(t)
+	h := strings.Join(headline(r), "\n")
+	if !strings.Contains(h, "looked sketchy") || !strings.Contains(h, "Most wanted: "+r.Agents[0].Agent) {
+		t.Error(h)
+	}
+	clean := &scan.Result{ToolCalls: 4}
+	if got := headline(clean); len(got) != 1 || !strings.Contains(got[0], "well behaved") {
+		t.Error(got)
+	}
+}
+
+func TestJoinFit(t *testing.T) {
+	titles := []string{"Sent secrets over the network", "Talked to a paste or webhook drop site", "Uploaded a local file", "Dumped environment variables"}
+	got := joinFit(titles, 80)
+	if len(got) > 80 || !strings.HasSuffix(got, "+2 more") {
+		t.Errorf("%q (%d)", got, len(got))
+	}
+	if got := joinFit(titles[:1], 10); got != titles[0] {
+		t.Errorf("first title must always show, got %q", got)
+	}
+	if got := joinFit(titles[2:], 200); got != "Uploaded a local file, Dumped environment variables" {
+		t.Error(got)
 	}
 }
 

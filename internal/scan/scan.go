@@ -327,7 +327,6 @@ func Run(o Options) (*Result, error) {
 	return res, nil
 }
 
-// Verdict turns a score into a label for the rap sheet.
 // sessionStart is the earliest time in a parsed file. Copied lines keep
 // their original timestamps, so a fork sorts after the session it copied.
 func sessionStart(s *event.Session) time.Time {
@@ -340,6 +339,7 @@ func sessionStart(s *event.Session) time.Time {
 	return t
 }
 
+// Verdict turns a score into a label for the rap sheet.
 func Verdict(score int) string {
 	switch {
 	case score == 0:

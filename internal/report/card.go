@@ -123,7 +123,7 @@ func Card(w io.Writer, r *scan.Result, loc *time.Location) error {
 }
 
 func cardSubtitle(r *scan.Result, loc *time.Location) string {
-	return summaryLine(r, loc)
+	return summaryLine(r, loc, true)
 }
 
 // WriteCard writes the card to path. A .png path is rendered from the SVG

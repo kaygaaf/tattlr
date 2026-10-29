@@ -41,7 +41,7 @@ func TestScanCommand(t *testing.T) {
 		{"bad agent", []string{"scan", "--agent", "clippy"}, 2, nil, nil},
 		{"bad since", []string{"scan", "--since", "yesterday-ish"}, 2, nil, nil},
 		{"fail on critical", []string{"scan", "--fail-on", "critical"}, 1, []string{"RAP SHEET"}, nil},
-		{"fail on but filtered clean", []string{"scan", "--fail-on", "high", "--project", "nope"}, 0, []string{"No agent activity"}, nil},
+		{"fail on but filtered clean", []string{"scan", "--fail-on", "high", "--project", "nope"}, 0, []string{"Nothing matched"}, nil},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -148,5 +148,20 @@ func TestVersionAndRules(t *testing.T) {
 	}
 	if code, _, _ := run(t, t.TempDir(), "", false, "bogus"); code != 2 {
 		t.Error("unknown command should exit 2")
+	}
+}
+
+func TestFirstRunEmptyHome(t *testing.T) {
+	code, out, _ := run(t, t.TempDir(), "", false)
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	for _, want := range []string{"Nothing to tell on yet", "tattlr trap", "tattlr protect install", "tattlr scan"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "RAP SHEET") {
+		t.Error("empty home should get the welcome, not an empty rap sheet")
 	}
 }
