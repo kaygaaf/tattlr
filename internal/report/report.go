@@ -79,6 +79,7 @@ func Text(w io.Writer, r *scan.Result, o TextOptions) {
 	fmt.Fprintln(w)
 
 	if r.ToolCalls == 0 {
+		protectSection(w, r, o, p)
 		fmt.Fprintln(w, " No agent activity found. Either your agents are saints or tattlr looked in the wrong place.")
 		fmt.Fprintln(w, dim(" Looked for Claude Code, Codex, Gemini CLI, OpenClaw and Cursor logs under "+tilde(r.HomeDir())))
 		fmt.Fprintln(w)
@@ -110,6 +111,7 @@ func Text(w io.Writer, r *scan.Result, o TextOptions) {
 			cell(a.BySeverity["medium"], rules.Medium), cell(a.BySeverity["low"], rules.Low), a.Score, verdict)
 	}
 	fmt.Fprintln(w)
+	protectSection(w, r, o, p)
 
 	if len(r.Offenses) == 0 {
 		fmt.Fprintln(w, p.c("32", " Nothing risky found. Suspiciously well behaved."))
@@ -151,6 +153,44 @@ func Text(w io.Writer, r *scan.Result, o TextOptions) {
 	fmt.Fprintln(w)
 }
 
+// protectSection shows what the live hooks stopped, newest first.
+func protectSection(w io.Writer, r *scan.Result, o TextOptions, p painter) {
+	ps := r.Protect
+	if ps == nil {
+		return
+	}
+	bold := func(s string) string { return p.c("1", s) }
+	dim := func(s string) string { return p.c("2", s) }
+	sum := fmt.Sprintf("%s checked live, %d blocked, %d asked", plural(ps.Checked, "call"), ps.Blocked, ps.Asked)
+	if ps.Would > 0 {
+		sum += fmt.Sprintf(", %d would have been blocked (observe mode)", ps.Would)
+	}
+	fmt.Fprintf(w, " %s  %s\n", bold("TATTLR STOPPED"), dim(sum))
+	for i, e := range ps.Stopped {
+		if i == o.Moments {
+			fmt.Fprintf(w, " %s\n", dim(fmt.Sprintf("  ...and %d more, see --json", len(ps.Stopped)-o.Moments)))
+			break
+		}
+		label, color := "BLOCKED", "1;31"
+		switch {
+		case e.Decision == "ask":
+			label, color = "ASKED  ", "33"
+		case e.Decision != "deny":
+			label, color = "WOULD  ", "2"
+		}
+		var titles []string
+		for _, id := range e.Rules {
+			if info, ok := rules.Catalog[id]; ok {
+				titles = append(titles, info.Title)
+			}
+		}
+		fmt.Fprintf(w, " %s  %s  %s  %s\n", p.c(color, label), e.Time.In(o.Loc).Format("Jan 02 15:04"), bold(e.Agent),
+			strings.Join(titles, ", "))
+		fmt.Fprintf(w, "          %s\n", p.c("36", clip(tilde(e.Evidence), o.Width-10)))
+	}
+	fmt.Fprintln(w)
+}
+
 func summaryLine(r *scan.Result, loc *time.Location) string {
 	parts := []string{
 		plural(r.Sessions, "session"),
@@ -177,6 +217,9 @@ func footer(r *scan.Result) string {
 		s += " Tip: run `tattlr trap` to plant fake keys and catch snoops."
 	} else {
 		s += fmt.Sprintf(" %s planted.", plural(r.Canaries, "canary"))
+	}
+	if r.Protect == nil {
+		s += " Run `tattlr protect install` to block this stuff live."
 	}
 	return s
 }

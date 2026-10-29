@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kaygaaf/tattlr/internal/audit"
+	"github.com/kaygaaf/tattlr/internal/config"
 	"github.com/kaygaaf/tattlr/internal/event"
 	"github.com/kaygaaf/tattlr/internal/parsers"
 	"github.com/kaygaaf/tattlr/internal/rules"
@@ -70,8 +72,64 @@ type Result struct {
 	Offenses  []Offense       `json:"offenses"`
 	Moments   []Moment        `json:"moments"`
 	Findings  []rules.Finding `json:"findings"`
+	Protect   *ProtectStats   `json:"protect,omitempty"`
 	Warnings  []string        `json:"warnings,omitempty"`
 	Home      string          `json:"-"`
+}
+
+// ProtectStats sums up the live hook audit log written by tattlr protect.
+type ProtectStats struct {
+	Checked int `json:"checked"`
+	Blocked int `json:"blocked"`
+	Asked   int `json:"asked"`
+	// Would counts calls observe mode let through but would have stopped.
+	Would int `json:"would_block"`
+	// Stopped lists the newest blocked, asked or would-block calls first.
+	Stopped []audit.Entry `json:"stopped"`
+}
+
+const maxStopped = 50
+
+func readAudit(o Options, want map[string]bool) (*ProtectStats, error) {
+	es, err := audit.Read(config.AuditPath(o.Home))
+	if err != nil || len(es) == 0 {
+		return nil, err
+	}
+	ps := &ProtectStats{}
+	for _, e := range es {
+		if !o.Since.IsZero() && e.Time.Before(o.Since) {
+			continue
+		}
+		if len(want) > 0 && !want[e.Agent] {
+			continue
+		}
+		if o.Project != "" && !strings.Contains(strings.ToLower(e.Cwd), strings.ToLower(o.Project)) {
+			continue
+		}
+		if e.Tool == "" && e.Error != "" {
+			continue // a payload tattlr could not read
+		}
+		ps.Checked++
+		switch {
+		case e.Decision == "deny":
+			ps.Blocked++
+		case e.Decision == "ask":
+			ps.Asked++
+		case e.Would == "deny" || e.Would == "ask":
+			ps.Would++
+		default:
+			continue
+		}
+		ps.Stopped = append(ps.Stopped, e)
+	}
+	if ps.Checked == 0 {
+		return nil, nil
+	}
+	sort.SliceStable(ps.Stopped, func(i, j int) bool { return ps.Stopped[i].Time.After(ps.Stopped[j].Time) })
+	if len(ps.Stopped) > maxStopped {
+		ps.Stopped = ps.Stopped[:maxStopped]
+	}
+	return ps, nil
 }
 
 // HomeDir is the home folder that was scanned.
@@ -96,6 +154,11 @@ func Run(o Options) (*Result, error) {
 	want := map[string]bool{}
 	for _, a := range o.Agents {
 		want[a] = true
+	}
+	if ps, err := readAudit(o, want); err != nil {
+		res.Warnings = append(res.Warnings, "audit log: "+err.Error())
+	} else {
+		res.Protect = ps
 	}
 	stats := map[string]*AgentStats{}
 	offenses := map[string]*Offense{}
