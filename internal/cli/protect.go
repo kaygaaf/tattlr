@@ -214,8 +214,25 @@ func tempBin(bin string) string {
 	switch {
 	case strings.Contains(b, "/_npx/"):
 		return "this tattlr is running from the npx cache (" + bin + ")"
-	case strings.HasPrefix(b, filepath.ToSlash(os.TempDir())+"/"):
+	case underTemp(b):
 		return "this tattlr is running from a temp folder (" + bin + ")"
 	}
 	return ""
+}
+
+// underTemp reports whether the slash path p sits in the temp dir. TMPDIR
+// can end in a slash (macOS does that) or be a symlink (/var -> /private/var),
+// and the binary path has had its symlinks resolved, so check both forms.
+func underTemp(p string) bool {
+	dirs := []string{filepath.Clean(os.TempDir())}
+	if real, err := filepath.EvalSymlinks(dirs[0]); err == nil {
+		dirs = append(dirs, real)
+	}
+	for _, d := range dirs {
+		d = strings.TrimSuffix(filepath.ToSlash(d), "/")
+		if d != "" && strings.HasPrefix(p, d+"/") {
+			return true
+		}
+	}
+	return false
 }

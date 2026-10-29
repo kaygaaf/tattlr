@@ -3,6 +3,7 @@ package cli
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -55,6 +56,17 @@ func TestTempBin(t *testing.T) {
 	}
 	if tempBin(filepath.Join(os.TempDir(), "x", "tattlr")) == "" {
 		t.Error("temp dir path should warn")
+	}
+	if real, err := filepath.EvalSymlinks(os.TempDir()); err == nil {
+		if tempBin(filepath.Join(real, "x", "tattlr")) == "" {
+			t.Error("resolved temp dir path should warn")
+		}
+	}
+	if runtime.GOOS != "windows" {
+		t.Setenv("TMPDIR", "/tmp/fake-tmp/")
+		if tempBin("/tmp/fake-tmp/x/tattlr") == "" {
+			t.Error("TMPDIR with a trailing slash should still match")
+		}
 	}
 	if got := tempBin("/home/kay/.local/bin/tattlr"); got != "" {
 		t.Errorf("normal install warned: %s", got)
