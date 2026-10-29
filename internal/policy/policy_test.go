@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kaygaaf/tattlr/internal/event"
 	"github.com/kaygaaf/tattlr/internal/rules"
@@ -160,6 +161,24 @@ func TestGlob(t *testing.T) {
 	} {
 		if Glob(c.p, c.s) != c.ok {
 			t.Errorf("Glob(%q,%q) != %v", c.p, c.s, c.ok)
+		}
+	}
+}
+
+func TestApprovalAndNotify(t *testing.T) {
+	p := Default()
+	if p.ApprovalTimeout != 30*time.Second || p.Notify {
+		t.Errorf("defaults: %v %v", p.ApprovalTimeout, p.Notify)
+	}
+	for in, want := range map[string]time.Duration{"45s": 45 * time.Second, "2m": 2 * time.Minute, "10": 10 * time.Second, "0": 0} {
+		p, err := Parse("approval_timeout: " + in + "\nnotify: true\n")
+		if err != nil || p.ApprovalTimeout != want || !p.Notify {
+			t.Errorf("%s: %v %v %v", in, p, err, want)
+		}
+	}
+	for _, bad := range []string{"approval_timeout: soon", "approval_timeout: 2h", "approval_timeout: -1s", "notify: maybe"} {
+		if _, err := Parse(bad); err == nil {
+			t.Errorf("%q should fail", bad)
 		}
 	}
 }

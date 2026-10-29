@@ -7,7 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/kaygaaf/tattlr/internal/event"
 	"github.com/kaygaaf/tattlr/internal/rules"
@@ -65,7 +67,12 @@ type Policy struct {
 	CanaryReads Action
 	Commands    []string // allowlisted command globs
 	Paths       []string // allowlisted path globs
-	Source      string   // file it came from, "" for the built-in default
+	// ApprovalTimeout is how long a hook waits for a click in tattlr ui
+	// when the agent can't ask by itself. 0 turns the wait off.
+	ApprovalTimeout time.Duration
+	// Notify pops a desktop notification when a call is blocked.
+	Notify bool
+	Source string // file it came from, "" for the built-in default
 }
 
 // Unskippable rules ignore allowlists and per-rule allow. They are the
@@ -116,6 +123,14 @@ rules:
 # session is marked, and anything it tries to send out afterwards is denied.
 # Set to deny to block the read itself.
 canary_reads: allow
+
+# Codex and Cursor file edits can't show an ask prompt. When "tattlr ui" is
+# running, those asks wait this long for you to click approve or deny in the
+# browser, then fall back to deny. Use 0 to skip the wait.
+approval_timeout: 30s
+
+# Pop a desktop notification when tattlr blocks something.
+notify: false
 
 # Things you trust. Globs, where * matches anything. These never switch off
 # the canary, self-protect or tainted-egress rules.
@@ -185,8 +200,11 @@ func Parse(src string) (*Policy, error) {
 		Defaults:    map[rules.Severity]Action{rules.Critical: Deny, rules.High: Ask, rules.Medium: Allow, rules.Low: Allow},
 		Rules:       map[string]Action{},
 		CanaryReads: Allow,
+
+		ApprovalTimeout: DefaultApprovalTimeout,
 	}
-	known := map[string]bool{"version": true, "mode": true, "defaults": true, "rules": true, "canary_reads": true, "allow": true}
+	known := map[string]bool{"version": true, "mode": true, "defaults": true, "rules": true, "canary_reads": true, "allow": true,
+		"approval_timeout": true, "notify": true}
 	var keys []string
 	for k := range m {
 		keys = append(keys, k)
@@ -244,6 +262,22 @@ func Parse(src string) (*Policy, error) {
 		}
 		p.CanaryReads = a
 	}
+	if v, ok := m["approval_timeout"]; ok && v != nil {
+		d, err := parseTimeout(fmt.Sprint(v))
+		if err != nil {
+			return nil, fmt.Errorf("approval_timeout: %w", err)
+		}
+		p.ApprovalTimeout = d
+	}
+	if v, ok := m["notify"]; ok && v != nil {
+		switch strings.ToLower(fmt.Sprint(v)) {
+		case "true", "yes", "on":
+			p.Notify = true
+		case "false", "no", "off":
+		default:
+			return nil, fmt.Errorf("notify: use true or false")
+		}
+	}
 	if al, err := asMap(m, "allow"); err != nil {
 		return nil, err
 	} else {
@@ -267,6 +301,29 @@ func Parse(src string) (*Policy, error) {
 		}
 	}
 	return p, nil
+}
+
+// DefaultApprovalTimeout is how long a hook waits for tattlr ui.
+const DefaultApprovalTimeout = 30 * time.Second
+
+// MaxApprovalTimeout keeps an agent from hanging for ages on one call.
+const MaxApprovalTimeout = 10 * time.Minute
+
+// parseTimeout reads "30s", "2m" or a bare number of seconds.
+func parseTimeout(s string) (time.Duration, error) {
+	s = strings.TrimSpace(s)
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		n, nerr := strconv.Atoi(s)
+		if nerr != nil {
+			return 0, fmt.Errorf("%q: use something like 30s or 2m", s)
+		}
+		d = time.Duration(n) * time.Second
+	}
+	if d < 0 || d > MaxApprovalTimeout {
+		return 0, fmt.Errorf("%q: use 0 to %s", s, MaxApprovalTimeout)
+	}
+	return d, nil
 }
 
 func asMap(m map[string]any, k string) (map[string]any, error) {
