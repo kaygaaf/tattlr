@@ -159,6 +159,12 @@ type Canary struct {
 type Engine struct {
 	Home     string
 	Canaries []Canary
+	// Protected lists files tattlr guards from edits: its own config,
+	// installed hook configs and its binary. A trailing "/" means the whole
+	// folder.
+	Protected []string
+	// Cwd resolves relative paths when known (live hooks know it).
+	Cwd string
 }
 
 // Check returns the findings for one event, at most one per rule.
@@ -181,6 +187,7 @@ func (en *Engine) Check(e event.Event) []Finding {
 	}
 
 	en.checkCanary(e, add)
+	en.checkSelfProtect(e, add)
 	if e.Escalated {
 		add(RuleSandboxEscape, "", 0)
 	}
