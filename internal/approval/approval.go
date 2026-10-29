@@ -33,7 +33,8 @@ import (
 // Info is what tattlr ui leaves in ui.json while it runs.
 type Info struct {
 	Port    int       `json:"port"`
-	Token   string    `json:"token"`
+	Token   string    `json:"token"` // signs hook requests; never sent
+	Login   string    `json:"login"` // goes in the URL tattlr ui prints
 	PID     int       `json:"pid"`
 	Started time.Time `json:"started"`
 }

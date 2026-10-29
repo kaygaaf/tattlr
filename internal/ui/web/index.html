@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf" content="{{CSRF}}">
+<title>tattlr</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/app.css">
+<script src="/app.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <img src="/favicon.svg" alt="" width="22" height="22">
+    <span class="name">tattlr</span>
+    <span id="live" class="live off" title="live updates"><i></i><b>connecting</b></span>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button id="tab-timeline" class="tab on" role="tab" data-view="timeline">Timeline</button>
+    <button id="tab-rap" class="tab" role="tab" data-view="rap">Rap sheet</button>
+  </nav>
+  <div id="policy" class="policy"></div>
+</header>
+
+<main>
+  <section id="view-timeline" class="view">
+    <div id="inbox" class="inbox" hidden>
+      <h2><span class="pulse"></span>Waiting for you <span id="inbox-count" class="count"></span></h2>
+      <div id="inbox-list"></div>
+    </div>
+
+    <div id="stats" class="stats"></div>
+
+    <div class="toolbar">
+      <div id="filters" class="chips">
+        <button class="chip on" data-filter="all">All</button>
+        <button class="chip" data-filter="stopped">Stopped</button>
+        <button class="chip" data-filter="deny">Blocked</button>
+        <button class="chip" data-filter="ask">Asked</button>
+        <button class="chip" data-filter="would">Would block</button>
+        <button class="chip" data-filter="allow">Allowed</button>
+      </div>
+      <select id="agent-filter" aria-label="agent"><option value="">All agents</option></select>
+    </div>
+
+    <ol id="timeline" class="timeline"></ol>
+    <p id="empty" class="empty" hidden>Nothing yet. Once <code>tattlr protect install</code> is in place, every tool call your agents make shows up here.</p>
+  </section>
+
+  <section id="view-rap" class="view" hidden>
+    <div id="rap"><p class="empty">Reading your agent logs...</p></div>
+  </section>
+</main>
+<footer class="foot">Local only. Nothing here leaves 127.0.0.1. Secrets are redacted before they hit the log.</footer>
+</body>
+</html>
