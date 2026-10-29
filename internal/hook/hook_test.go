@@ -377,4 +377,16 @@ func TestOpenClawContract(t *testing.T) {
 	if m["action"] != "allow" {
 		t.Errorf("allow: %v", m)
 	}
+	// apply_patch: the host's derived paths are judged one by one.
+	pol := config.PolicyPath(v.home)
+	m = v.hook("openclaw", map[string]any{"tool_name": "apply_patch", "params": map[string]any{"input": "*** Begin Patch\n*** Update File: notes.md\n*** End Patch"},
+		"derived_paths": []string{filepath.Join(v.proj, "notes.md"), pol}, "session_id": "o1", "cwd": v.proj}).json(t)
+	if m["action"] != "deny" {
+		t.Errorf("patch into the policy file: %v", m)
+	}
+	m = v.hook("openclaw", map[string]any{"tool_name": "apply_patch", "params": map[string]any{"input": "*** Begin Patch\n*** Update File: notes.md\n*** End Patch"},
+		"session_id": "o1", "cwd": v.proj}).json(t)
+	if m["action"] != "allow" {
+		t.Errorf("plain patch: %v", m)
+	}
 }

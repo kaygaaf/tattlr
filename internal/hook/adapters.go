@@ -279,6 +279,30 @@ func parseOpenClaw(raw []byte) (call, error) {
 		return c, errors.New("no tool_name")
 	}
 	args := jsonl.Obj(m, "params")
+	if strings.EqualFold(c.tool, "apply_patch") {
+		// The host's derived_paths come first; parse the patch if they are missing.
+		patch := jsonl.FirstStr(args, "input", "patch", "command")
+		files := toolmap.PatchFiles(patch)
+		if ds, ok := m["derived_paths"].([]any); ok && len(ds) > 0 {
+			files = files[:0]
+			for _, d := range ds {
+				if s, ok := d.(string); ok && s != "" {
+					files = append(files, s)
+				}
+			}
+		}
+		for _, f := range files {
+			e := one(c.agent, c.session, c.cwd, "apply_patch", map[string]any{"path": f})
+			e.Args = jsonl.Truncate(patch, 4000)
+			c.events = append(c.events, e)
+		}
+		if len(c.events) == 0 {
+			e := one(c.agent, c.session, c.cwd, "apply_patch", nil)
+			e.Args = jsonl.Truncate(patch, 4000)
+			c.events = append(c.events, e)
+		}
+		return c, nil
+	}
 	c.events = []event.Event{one(c.agent, c.session, c.cwd, c.tool, args)}
 	if s := jsonl.FirstStr(args, "content", "newText", "new_string"); s != "" && c.events[0].Kind == event.Write {
 		c.events[0].Args = jsonl.Truncate(s, 4000)
