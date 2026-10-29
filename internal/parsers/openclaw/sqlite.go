@@ -35,7 +35,12 @@ func openDB(path string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	u := url.URL{Scheme: "file", Path: path, RawQuery: "mode=ro&_pragma=busy_timeout(3000)&_pragma=query_only(1)"}
+	// file:///C:/x on Windows, file:///home/x elsewhere.
+	p := filepath.ToSlash(path)
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	u := url.URL{Scheme: "file", Path: p, RawQuery: "mode=ro&_pragma=busy_timeout(3000)&_pragma=query_only(1)"}
 	return sql.Open("sqlite", u.String())
 }
 

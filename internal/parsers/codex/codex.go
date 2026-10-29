@@ -11,6 +11,7 @@ package codex
 
 import (
 	"encoding/json"
+	"github.com/kaygaaf/tattlr/internal/pathx"
 	"os"
 	"path/filepath"
 	"strings"
@@ -167,8 +168,8 @@ func (Parser) Parse(path string) (*event.Session, error) {
 func patchEvents(base event.Event, patch, cwd string) []event.Event {
 	var out []event.Event
 	for _, f := range toolmap.PatchFiles(patch) {
-		if cwd != "" && !filepath.IsAbs(f) && !strings.HasPrefix(f, "~") {
-			f = filepath.Join(cwd, f)
+		if cwd != "" && !pathx.IsAbs(f) && !strings.HasPrefix(f, "~") {
+			f = pathx.Join(cwd, f)
 		}
 		e := base
 		toolmap.Fill(&e, "apply_patch", map[string]any{"path": f})

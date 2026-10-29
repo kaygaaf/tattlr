@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/kaygaaf/tattlr/internal/pathx"
 	"io"
 	"os"
 	"path/filepath"
@@ -376,6 +377,16 @@ func readMaybe(path string) ([]byte, bool, error) {
 func Command(bin, agent string) string { return shellQuote(bin) + " hook " + agent }
 
 func shellQuote(s string) string {
+	if pathx.HasDrive(s) {
+		// Windows: agents may run hooks through bash, cmd or PowerShell.
+		// Forward slashes work in all three, and so does a bare path;
+		// double quotes are the only quoting they share.
+		s = strings.ReplaceAll(s, `\`, "/")
+		if regexp.MustCompile(`^[A-Za-z]:[A-Za-z0-9_./~-]+$`).MatchString(s) {
+			return s
+		}
+		return `"` + s + `"`
+	}
 	if regexp.MustCompile(`^[A-Za-z0-9_./-]+$`).MatchString(s) {
 		return s
 	}

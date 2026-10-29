@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -14,7 +15,7 @@ import (
 
 func opts(home string, agents ...string) (Options, *bytes.Buffer) {
 	var out bytes.Buffer
-	return Options{Home: home, Bin: "/opt/tattlr bin/tattlr", Agents: agents, Yes: true, Out: &out,
+	return Options{Home: home, Bin: testBin, Agents: agents, Yes: true, Out: &out,
 		Now: func() time.Time { return time.Date(2026, 10, 29, 10, 0, 0, 0, time.UTC) }}, &out
 }
 
@@ -74,7 +75,7 @@ func TestClaudeRoundTrip(t *testing.T) {
 	}
 	ours := pre[1].(map[string]any)
 	h := ours["hooks"].([]any)[0].(map[string]any)
-	if ours["matcher"] != "*" || h["command"] != `'/opt/tattlr bin/tattlr' hook claude` || h["type"] != "command" {
+	if ours["matcher"] != "*" || h["command"] != testCmd+" hook claude" || h["type"] != "command" {
 		t.Errorf("entry: %v", ours)
 	}
 	// Key order and the user's own hook survive.
@@ -169,7 +170,7 @@ func TestCursorRoundTrip(t *testing.T) {
 	for _, ev := range cursorEvents {
 		list, _ := hooks[ev.name].([]any)
 		last := list[len(list)-1].(map[string]any)
-		if last["command"] != `'/opt/tattlr bin/tattlr' hook cursor` {
+		if last["command"] != testCmd+" hook cursor" {
 			t.Errorf("%s: %v", ev.name, list)
 		}
 		if ev.matcher != "" && last["matcher"] != ev.matcher {
@@ -204,7 +205,7 @@ func TestCodexTOMLRoundTrip(t *testing.T) {
 	}
 	got := read(t, p)
 	for _, want := range []string{tomlBegin, "[[hooks.PreToolUse]]", "[[hooks.PreToolUse.hooks]]",
-		`command = "'/opt/tattlr bin/tattlr' hook codex"`, tomlEnd} {
+		"command = " + tomlQuote(testCmd+" hook codex"), tomlEnd} {
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %q in:\n%s", want, got)
 		}
@@ -343,7 +344,7 @@ func TestGeminiRoundTrip(t *testing.T) {
 	}
 	g := groups[1].(map[string]any)
 	h := g["hooks"].([]any)[0].(map[string]any)
-	if g["matcher"] != ".*" || h["command"] != `'/opt/tattlr bin/tattlr' hook gemini` || h["timeout"] != float64(10000) || h["name"] != "tattlr" {
+	if g["matcher"] != ".*" || h["command"] != testCmd+" hook gemini" || h["timeout"] != float64(10000) || h["name"] != "tattlr" {
 		t.Errorf("entry: %v", g)
 	}
 	if !strings.Contains(out.String(), "fails open") {
@@ -355,7 +356,7 @@ func TestGeminiRoundTrip(t *testing.T) {
 	if n := len(mustJSON(t, read(t, p))["hooks"].(map[string]any)["BeforeTool"].([]any)); n != 2 {
 		t.Errorf("second install: %d groups", n)
 	}
-	st := Status(home, "/opt/tattlr bin/tattlr", time.Now())
+	st := Status(home, testBin, time.Now())
 	found := false
 	for _, s := range st {
 		if s.Agent == "gemini" && s.Installed {
@@ -471,5 +472,33 @@ func TestTomlKeepsWhatCodexAppended(t *testing.T) {
 	}
 	if again, _, _ := tomlInstall(s, "/opt/tattlr hook codex", 40); string(again) != s {
 		t.Errorf("second rewrite not a no-op:\n%s", again)
+	}
+}
+
+// testBin is an absolute binary path with a space in it, on whatever OS the
+// tests run on. testCmd is how it shows up in hook commands.
+var testBin, testCmd = func() (string, string) {
+	if runtime.GOOS == "windows" {
+		return `C:\opt\tattlr bin\tattlr.exe`, `"C:/opt/tattlr bin/tattlr.exe"`
+	}
+	return "/opt/tattlr bin/tattlr", `'/opt/tattlr bin/tattlr'`
+}()
+
+func tomlQuote(s string) string {
+	return `"` + strings.ReplaceAll(strings.ReplaceAll(s, `\`, `\\`), `"`, `\"`) + `"`
+}
+
+func TestShellQuote(t *testing.T) {
+	for in, want := range map[string]string{
+		"/home/kay/.local/bin/tattlr":                  "/home/kay/.local/bin/tattlr",
+		"/opt/tattlr bin/tattlr":                       `'/opt/tattlr bin/tattlr'`,
+		"/opt/it's/tattlr":                             `'/opt/it'\''s/tattlr'`,
+		`C:\Users\kay\AppData\Local\tattlr\tattlr.exe`: "C:/Users/kay/AppData/Local/tattlr/tattlr.exe",
+		`C:\Users\RUNNER~1\bin\tattlr.exe`:             "C:/Users/RUNNER~1/bin/tattlr.exe",
+		`C:\Program Files\tattlr\tattlr.exe`:           `"C:/Program Files/tattlr/tattlr.exe"`,
+	} {
+		if got := shellQuote(in); got != want {
+			t.Errorf("shellQuote(%q) = %s, want %s", in, got, want)
+		}
 	}
 }

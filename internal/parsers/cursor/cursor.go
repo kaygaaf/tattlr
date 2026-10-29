@@ -102,7 +102,7 @@ func projectFromEvents(guess, path string, evs []event.Event) string {
 				if encodeProject(dir) == enc {
 					return dir
 				}
-				dir = filepath.Dir(dir)
+				dir = slashDir(dir)
 			}
 		}
 	}
@@ -124,4 +124,17 @@ func projectFromPath(path string) string {
 		}
 	}
 	return ""
+}
+
+// slashDir is path.Dir for the Unix paths Cursor logs (filepath.Dir would
+// turn them into backslashes on Windows).
+func slashDir(p string) string {
+	i := strings.LastIndex(p, "/")
+	switch {
+	case i < 0:
+		return "."
+	case i == 0:
+		return "/"
+	}
+	return p[:i]
 }

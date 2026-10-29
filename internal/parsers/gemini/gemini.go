@@ -12,6 +12,7 @@ package gemini
 
 import (
 	"encoding/json"
+	"github.com/kaygaaf/tattlr/internal/pathx"
 	"os"
 	"path/filepath"
 	"strings"
@@ -110,7 +111,7 @@ func (Parser) Parse(path string) (*event.Session, error) {
 		}
 		s.Project = filepath.Base(dir)
 		if b, err := os.ReadFile(filepath.Join(dir, ".project_root")); err == nil {
-			if root := strings.TrimSpace(string(b)); filepath.IsAbs(root) {
+			if root := strings.TrimSpace(string(b)); pathx.IsAbs(root) {
 				s.Project = root
 			}
 		}

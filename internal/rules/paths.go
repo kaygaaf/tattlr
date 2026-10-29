@@ -20,6 +20,10 @@ func normPath(p, home string) string {
 		home = strings.TrimSuffix(strings.ReplaceAll(home, "\\", "/"), "/")
 		if p == home || strings.HasPrefix(p, home+"/") {
 			p = "~" + p[len(home):]
+		} else if len(home) > 1 && home[1] == ':' && len(p) >= len(home) && strings.EqualFold(p[:len(home)], home) &&
+			(len(p) == len(home) || p[len(home)] == '/') {
+			// Windows paths don't care about case.
+			p = "~" + p[len(home):]
 		}
 	}
 	// /Users/<name>/..., /home/<name>/... and /root/... count as a home too.

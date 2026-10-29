@@ -100,3 +100,33 @@ func TestIsEgress(t *testing.T) {
 		}
 	}
 }
+
+// TestSelfProtectWindowsPaths runs on every OS: hooks on Windows see
+// drive-letter paths, and those used to be treated as relative.
+func TestSelfProtectWindowsPaths(t *testing.T) {
+	en := &Engine{Home: `C:\Users\kay`, Cwd: `C:\Users\kay\code\app`, Protected: []string{
+		`C:\Users\kay\.config\tattlr\`, `C:\Users\kay\.claude\settings.json`,
+		`C:\Users\kay\AppData\Local\tattlr\tattlr.exe`,
+	}}
+	cases := []struct {
+		name string
+		e    event.Event
+		want bool
+	}{
+		{"write settings", event.Event{Kind: event.Write, Path: `C:\Users\kay\.claude\settings.json`}, true},
+		{"other case", event.Event{Kind: event.Write, Path: `c:\users\KAY\.claude\settings.json`}, true},
+		{"forward slashes", event.Event{Kind: event.Write, Path: "C:/Users/kay/.config/tattlr/policy.yaml"}, true},
+		{"relative", event.Event{Kind: event.Write, Path: `..\..\.claude\settings.json`}, true},
+		{"del binary", event.Event{Kind: event.Shell, Command: `del C:\Users\kay\AppData\Local\tattlr\tattlr.exe`}, true},
+		{"mcp write", event.Event{Kind: event.MCP, Tool: "write_file", Args: `{"path":"C:\\Users\\kay\\.config\\tattlr\\policy.yaml"}`}, true},
+		{"read settings", event.Event{Kind: event.Read, Path: `C:\Users\kay\.claude\settings.json`}, false},
+		{"unrelated", event.Event{Kind: event.Write, Path: `C:\Users\kay\code\app\main.go`}, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := hasRule(en.Check(c.e), RuleSelfProtect); got != c.want {
+				t.Errorf("self-protect = %v, want %v", got, c.want)
+			}
+		})
+	}
+}

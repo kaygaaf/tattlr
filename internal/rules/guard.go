@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"github.com/kaygaaf/tattlr/internal/pathx"
 	"path"
 	"regexp"
 	"strings"
@@ -116,15 +117,20 @@ func (en *Engine) protectedHit(tok string) string {
 	if tok == "" {
 		return ""
 	}
-	if en.Cwd != "" && !strings.HasPrefix(tok, "/") && !strings.HasPrefix(tok, "~") && !strings.HasPrefix(tok, "$") {
+	if en.Cwd != "" && !pathx.IsAbs(tok) && !strings.HasPrefix(tok, "~") && !strings.HasPrefix(tok, "$") {
 		tok = path.Join(strings.ReplaceAll(en.Cwd, "\\", "/"), tok)
 	}
 	t := normPath(path.Clean(normPath(tok, en.Home)), en.Home)
 	for _, p := range en.Protected {
-		dir := strings.HasSuffix(p, "/")
-		n := normPath(strings.TrimSuffix(p, "/"), en.Home)
+		dir := strings.HasSuffix(p, "/") || strings.HasSuffix(p, "\\")
+		n := normPath(strings.TrimRight(p, "/\\"), en.Home)
 		if n == "" {
 			continue
+		}
+		t := t
+		if pathx.HasDrive(n) || pathx.HasDrive(t) {
+			// Windows paths don't care about case.
+			n, t = strings.ToLower(n), strings.ToLower(t)
 		}
 		if t == n || dir && strings.HasPrefix(t, n+"/") {
 			return n
