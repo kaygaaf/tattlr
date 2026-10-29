@@ -43,7 +43,7 @@ func (p painter) c(code, s string) string {
 func (p painter) sev(s rules.Severity, text string) string {
 	switch s {
 	case rules.Critical:
-		return p.c("1;97;41", text)
+		return p.c("1;38;5;231;48;5;160", text)
 	case rules.High:
 		return p.c("1;31", text)
 	case rules.Medium:
@@ -79,7 +79,7 @@ func Text(w io.Writer, r *scan.Result, o TextOptions) {
 	}
 
 	fmt.Fprintln(w)
-	fmt.Fprintf(w, " %s  %s  %s\n", p.c("1;97;41", " TATTLR "), bold("RAP SHEET"), dim(summaryLine(r, o.Loc, false)))
+	fmt.Fprintf(w, " %s  %s  %s\n", p.c("1;38;5;231;48;5;160", " TATTLR "), bold("RAP SHEET"), dim(summaryLine(r, o.Loc, false)))
 	fmt.Fprintln(w)
 
 	if r.ToolCalls == 0 {
@@ -159,9 +159,12 @@ func Text(w io.Writer, r *scan.Result, o TextOptions) {
 			proj = "unknown project"
 		}
 		fmt.Fprintf(w, " %s  %s  %s  %s\n", p.sev(m.Severity, sevLabel[m.Severity]), when, bold(e.Agent), dim(proj))
-		titles := joinFit(m.Titles, o.Width-7)
+		var titles string
+		const tag = "  (tried it, tattlr blocked it)"
 		if m.Blocked {
-			titles += p.c("1;32", "  (tried it, tattlr blocked it)")
+			titles = joinFit(m.Titles, o.Width-7-len(tag)) + p.c("1;32", tag)
+		} else {
+			titles = joinFit(m.Titles, o.Width-7)
 		}
 		fmt.Fprintf(w, "       %s\n", titles)
 		fmt.Fprintf(w, "       %s\n", p.c("36", clip(tilde(m.Evidence, r.HomeDir()), o.Width-7)))

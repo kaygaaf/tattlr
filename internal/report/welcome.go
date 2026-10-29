@@ -17,7 +17,7 @@ func Welcome(w io.Writer, home string, color bool) {
 	where := tilde(home, home)
 
 	fmt.Fprintln(w)
-	fmt.Fprintf(w, " %s  %s\n", p.c("1;97;41", " TATTLR "), bold("keep YOLO mode, get a tattletale"))
+	fmt.Fprintf(w, " %s  %s\n", p.c("1;38;5;231;48;5;160", " TATTLR "), bold("keep YOLO mode, get a tattletale"))
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, " Nothing to tell on yet. No Claude Code, Codex, Gemini CLI, OpenClaw or\n Cursor logs under %s.\n", where)
 	fmt.Fprintln(w)
