@@ -76,8 +76,7 @@ func ReadOnlyCommand(cmd string) bool {
 				return false
 			}
 		case "tattlr":
-			if len(s.Args) > 1 && s.Args[1] != "scan" && s.Args[1] != "rules" && s.Args[1] != "version" &&
-				!(len(s.Args) > 2 && s.Args[1] == "protect" && s.Args[2] == "status") {
+			if len(s.Args) > 1 && !tattlrReadOnly(s.Args[1:]) {
 				return false
 			}
 		}
@@ -180,4 +179,18 @@ func (en *Engine) checkSelfProtect(e event.Event, add func(string, string, Sever
 			}
 		}
 	}
+}
+
+// Evidence is the redacted one-line summary of an event, as used in
+// findings and the audit log.
+func Evidence(e event.Event) string { return evidence(e) }
+
+func tattlrReadOnly(args []string) bool {
+	switch args[0] {
+	case "scan", "rules", "version", "help", "--help", "-h":
+		return true
+	case "protect":
+		return len(args) > 1 && args[1] == "status"
+	}
+	return false
 }

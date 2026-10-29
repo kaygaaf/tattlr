@@ -125,7 +125,7 @@ func (p *yparser) listAt(indent int) ([]any, error) {
 	var out []any
 	for p.i < len(p.lines) {
 		l := p.lines[p.i]
-		if l.indent != indent || !(strings.HasPrefix(l.text, "- ") || l.text == "-") {
+		if l.indent != indent || (!strings.HasPrefix(l.text, "- ") && l.text != "-") {
 			if l.indent > indent {
 				return nil, fmt.Errorf("line %d: lists can only hold plain values", l.n)
 			}

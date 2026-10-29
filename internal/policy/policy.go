@@ -296,13 +296,19 @@ func (p *Policy) Decide(fs []rules.Finding, e event.Event, home string) Decision
 	d := Decision{}
 	allowlisted := p.allowlisted(e, home)
 	var why []string
+	// Reading a canary has to work, or the trap never springs. That also
+	// covers the secret-read finding the same decoy file trips.
+	canaryRead := false
 	for _, f := range fs {
-		a := p.actionFor(f)
 		if f.Rule == rules.RuleCanary {
 			d.Taints = true
-			if p.CanaryReads == Allow && readLike(e) {
-				a = Allow
-			}
+			canaryRead = p.CanaryReads == Allow && readLike(e)
+		}
+	}
+	for _, f := range fs {
+		a := p.actionFor(f)
+		if canaryRead && (f.Rule == rules.RuleCanary || f.Rule == rules.RuleSecretRead) {
+			a = Allow
 		}
 		if allowlisted && !Unskippable[f.Rule] {
 			a = Allow
