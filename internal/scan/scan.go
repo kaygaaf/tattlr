@@ -54,6 +54,9 @@ type Moment struct {
 	Rules    []string       `json:"rules"`
 	Evidence string         `json:"evidence"`
 	Event    event.Event    `json:"event"`
+	// Blocked is set when the live hook denied this exact call, so the log
+	// shows an attempt rather than something that ran.
+	Blocked bool `json:"blocked,omitempty"`
 }
 
 // Result is everything a report needs.
@@ -90,12 +93,28 @@ type ProtectStats struct {
 
 const maxStopped = 50
 
-func readAudit(o Options, want map[string]bool) (*ProtectStats, error) {
+// deniedKey ties an audit entry to the session log line for the same call.
+func deniedKey(session, evidence string) string {
+	return session + "\x00" + strings.TrimSpace(evidence)
+}
+
+func eventKeys(e event.Event) []string {
+	var ks []string
+	for _, v := range []string{e.Command, e.Path, e.URL, e.Args} {
+		if strings.TrimSpace(v) != "" {
+			ks = append(ks, deniedKey(e.SessionID, v))
+		}
+	}
+	return ks
+}
+
+func readAudit(o Options, want map[string]bool) (*ProtectStats, map[string]bool, error) {
 	es, err := audit.Read(config.AuditPath(o.Home))
 	if err != nil || len(es) == 0 {
-		return nil, err
+		return nil, nil, err
 	}
 	ps := &ProtectStats{}
+	denied := map[string]bool{}
 	for _, e := range es {
 		if !o.Since.IsZero() && e.Time.Before(o.Since) {
 			continue
@@ -113,6 +132,9 @@ func readAudit(o Options, want map[string]bool) (*ProtectStats, error) {
 		switch {
 		case e.Decision == "deny":
 			ps.Blocked++
+			if e.Session != "" && e.Evidence != "" {
+				denied[deniedKey(e.Session, e.Evidence)] = true
+			}
 		case e.Decision == "ask":
 			ps.Asked++
 		case e.Would == "deny" || e.Would == "ask":
@@ -123,13 +145,13 @@ func readAudit(o Options, want map[string]bool) (*ProtectStats, error) {
 		ps.Stopped = append(ps.Stopped, e)
 	}
 	if ps.Checked == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	sort.SliceStable(ps.Stopped, func(i, j int) bool { return ps.Stopped[i].Time.After(ps.Stopped[j].Time) })
 	if len(ps.Stopped) > maxStopped {
 		ps.Stopped = ps.Stopped[:maxStopped]
 	}
-	return ps, nil
+	return ps, denied, nil
 }
 
 // HomeDir is the home folder that was scanned.
@@ -155,7 +177,8 @@ func Run(o Options) (*Result, error) {
 	for _, a := range o.Agents {
 		want[a] = true
 	}
-	if ps, err := readAudit(o, want); err != nil {
+	ps, denied, err := readAudit(o, want)
+	if err != nil {
 		res.Warnings = append(res.Warnings, "audit log: "+err.Error())
 	} else {
 		res.Protect = ps
@@ -221,6 +244,11 @@ func Run(o Options) (*Result, error) {
 				}
 				st.Flagged++
 				m := Moment{Event: fs[0].Event, Evidence: fs[0].Evidence}
+				for _, k := range eventKeys(e) {
+					if denied[k] {
+						m.Blocked = true
+					}
+				}
 				sort.SliceStable(fs, func(i, j int) bool { return fs[i].Severity > fs[j].Severity })
 				for _, f := range fs {
 					res.Findings = append(res.Findings, f)

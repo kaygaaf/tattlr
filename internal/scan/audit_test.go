@@ -1,6 +1,8 @@
 package scan
 
 import (
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -46,5 +48,35 @@ func TestScanReadsAuditLog(t *testing.T) {
 	r, _ = Run(Options{Home: home, Now: now, Project: "site"})
 	if r.Protect == nil || r.Protect.Checked != 1 {
 		t.Errorf("project filter: %+v", r.Protect)
+	}
+}
+
+// The live Codex fixture has two runs of the same injection: one before the
+// hook was trusted (the curl ran) and one after (the hook denied it).
+func TestMomentsMarkedBlockedFromAudit(t *testing.T) {
+	home := filepath.Join("..", "..", "testdata", "live", "codex-0.165")
+	r, err := Run(Options{Home: home, Now: time.Date(2026, 10, 30, 0, 0, 0, 0, time.UTC)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Protect == nil || r.Protect.Blocked != 1 {
+		t.Fatalf("protect stats: %+v", r.Protect)
+	}
+	var blocked, ran int
+	for _, m := range r.Moments {
+		if !strings.HasPrefix(m.Event.Command, "curl ") {
+			continue
+		}
+		if m.Blocked {
+			blocked++
+			if m.Event.SessionID != "01a187a4-b4dc-7561-aec9-2dfe79168c02" {
+				t.Errorf("wrong session marked blocked: %s", m.Event.SessionID)
+			}
+		} else {
+			ran++
+		}
+	}
+	if blocked != 1 || ran != 1 {
+		t.Errorf("curl moments: blocked=%d ran=%d, want 1 and 1", blocked, ran)
 	}
 }
