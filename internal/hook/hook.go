@@ -23,7 +23,7 @@ import (
 )
 
 // Agents lists the hook adapters.
-var Agents = []string{"claude", "codex", "cursor", "openclaw"}
+var Agents = []string{"claude", "codex", "cursor", "gemini", "openclaw"}
 
 // Options configure one hook run.
 type Options struct {

@@ -22,7 +22,10 @@ func init() {
 
 var (
 	killTattlrRe = regexp.MustCompile(`\b(pkill|killall|kill)\b[^;&|\n]*tattlr|\btattlr\s+(protect\s+(uninstall|off)|trap\b[^;&|\n]*--remove)|\bchmod\s+[^;&|\n]*-x[^;&|\n]*tattlr`)
-	hooksOffRe   = regexp.MustCompile(`(?m)\bdisableAllHooks\b|(?:^|[^A-Za-z_]|\\n)(codex_)?hooks\s*=\s*false`)
+	hooksOffRe   = regexp.MustCompile(`(?m)\bdisableAllHooks\b|(?:^|[^A-Za-z_]|\\n)(codex_)?hooks\s*=\s*false` +
+		// Gemini CLI: hooksConfig.enabled false, the old enableHooks
+		// switch, or tattlr listed in hooksConfig.disabled.
+		`|"?hooksConfig"?\s*:\s*\{[^}]*"?enabled"?\s*:\s*false|hooksConfig\.enabled\s*=\s*false|"?enableHooks"?\s*:\s*false|"?disabled"?\s*:\s*\[[^\]]*tattlr`)
 )
 
 // readOnlyProgs never change a file on their own. A command made only of

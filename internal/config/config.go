@@ -44,6 +44,7 @@ func HookConfigs(home string) []string {
 		filepath.Join(home, ".codex", "config.toml"),
 		filepath.Join(home, ".codex", "hooks.json"),
 		filepath.Join(home, ".cursor", "hooks.json"),
+		filepath.Join(home, ".gemini", "settings.json"),
 	}
 }
 

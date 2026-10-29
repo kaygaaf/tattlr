@@ -25,6 +25,7 @@ var adapters = map[string]adapter{
 	"claude":   {parseClaude, writeClaude},
 	"codex":    {parseCodex, writeCodex},
 	"cursor":   {parseCursor, writeCursor},
+	"gemini":   {parseGemini, writeGemini},
 	"openclaw": {parseOpenClaw, writeOpenClaw},
 }
 
@@ -258,6 +259,68 @@ func writeCursor(w io.Writer, c call, d policy.Decision, reason string) int {
 		out["agent_message"] = reason
 	}
 	writeJSON(w, out)
+	return 0
+}
+
+// ---------------- Gemini CLI ----------------
+//
+// BeforeTool input (hooks/types.ts, docs/hooks/reference): session_id,
+// transcript_path, cwd, hook_event_name, timestamp, tool_name, tool_input,
+// mcp_context {server_name, tool_name, ...} for MCP tools,
+// original_request_name. Built-in tools are run_shell_command, read_file,
+// write_file, replace, read_many_files, glob, grep_search, web_fetch and so
+// on; MCP tools are mcp_<server>_<tool>.
+// Answer on stdout, exit 0: {"decision": "deny", "reason"} blocks the call
+// and sends the reason to the model. {"decision": "ask"} makes the
+// scheduler show its confirmation prompt (scheduler.ts forces ASK_USER).
+// Allow prints {} so Gemini doesn't fall back to parsing stderr.
+
+func parseGemini(raw []byte) (call, error) {
+	m, err := decode(raw)
+	if err != nil {
+		return call{}, err
+	}
+	c := call{agent: event.AgentGemini, hookEvent: jsonl.Str(m, "hook_event_name"), session: jsonl.Str(m, "session_id"),
+		cwd: jsonl.Str(m, "cwd"), tool: jsonl.Str(m, "tool_name")}
+	if c.hookEvent != "" && c.hookEvent != "BeforeTool" {
+		c.skip = true
+		return c, nil
+	}
+	if c.tool == "" {
+		return c, errors.New("no tool_name")
+	}
+	args := jsonl.Obj(m, "tool_input")
+	name := c.tool
+	mcp := jsonl.Obj(m, "mcp_context")
+	if mcp != nil {
+		name = "mcp__" + jsonl.Str(mcp, "server_name") + "__" + jsonl.FirstStr(mcp, "tool_name")
+	}
+	e := one(c.agent, c.session, c.cwd, name, args)
+	e.Tool = c.tool
+	if mcp != nil {
+		e.Kind = event.MCP
+		if u := jsonl.Str(mcp, "url"); u != "" && e.URL == "" {
+			e.URL = u
+		}
+	}
+	if s := jsonl.FirstStr(args, "content", "new_string"); s != "" && e.Kind == event.Write {
+		e.Args = jsonl.Truncate(s, 4000)
+	}
+	c.events = []event.Event{e}
+	return c, nil
+}
+
+func writeGemini(w io.Writer, _ call, d policy.Decision, reason string) int {
+	switch d.Action {
+	case policy.Allow:
+		writeJSON(w, map[string]any{})
+	case policy.Ask:
+		writeJSON(w, map[string]any{"decision": "ask", "reason": reason,
+			"systemMessage": "tattlr wants you to OK this: " + firstSentence(d.Reason)})
+	default:
+		writeJSON(w, map[string]any{"decision": "deny", "reason": reason,
+			"systemMessage": "tattlr blocked a tool call: " + firstSentence(d.Reason)})
+	}
 	return 0
 }
 
