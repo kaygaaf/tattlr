@@ -22,8 +22,8 @@ func TestRunFixtures(t *testing.T) {
 	if len(res.Agents) != 5 {
 		t.Fatalf("agents = %d, want 5", len(res.Agents))
 	}
-	if res.Sessions != 9 {
-		t.Errorf("sessions = %d, want 9", res.Sessions)
+	if res.Sessions != 10 {
+		t.Errorf("sessions = %d, want 10", res.Sessions)
 	}
 	if res.Canaries != 2 {
 		t.Errorf("canaries = %d", res.Canaries)
@@ -62,7 +62,7 @@ func TestFilters(t *testing.T) {
 	}{
 		{"agent", Options{Agents: []string{"codex"}}, 2},
 		{"project", Options{Project: "billing"}, 1},
-		{"since", Options{Since: time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)}, 7},
+		{"since", Options{Since: time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)}, 8},
 		{"nothing", Options{Project: "does-not-exist"}, 0},
 	}
 	for _, c := range cases {

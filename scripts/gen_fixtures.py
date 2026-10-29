@@ -16,62 +16,122 @@ def w(path, lines):
             f.write("\n")
 
 # ---------------- Claude Code ----------------
-def cc(sid, cwd, branch):
+# Real shape (checked against claude-code-log's models and ccusage's loader):
+# assistant replies stream one content block per line, every block line
+# repeating the same message.id and requestId. Tool results come back in a
+# user line as tool_result blocks plus a structured toolUseResult copy.
+# Other line types (summary, file-history-snapshot, system, attachment,
+# ai-title, queue-operation) sit in between and carry no tool calls.
+def cc(sid, cwd, branch, sidechain=False, agent_id=None):
     n = [0]
-    def line(kind, ts, content, parent=None, extra=None):
+    last = [None]
+    def base(kind, ts):
         n[0] += 1
-        d = {"parentUuid": parent, "isSidechain": False, "userType": "external", "cwd": cwd,
-             "sessionId": sid, "version": "2.1.14", "gitBranch": branch, "type": kind,
-             "uuid": f"{sid[:8]}-{n[0]:04d}", "timestamp": ts}
-        if kind == "assistant":
-            d["message"] = {"id": f"msg_{n[0]:04d}", "type": "message", "role": "assistant",
-                            "model": "claude-sonnet-4-5", "content": content, "stop_reason": "tool_use"}
-        else:
-            d["message"] = {"role": "user", "content": content}
-        if extra: d.update(extra)
+        d = {"parentUuid": last[0], "isSidechain": sidechain, "userType": "external", "cwd": cwd,
+             "sessionId": sid, "version": "2.1.14", "gitBranch": branch}
+        if agent_id: d["agentId"] = agent_id
+        d.update({"type": kind, "uuid": f"{sid[:8]}-{agent_id or 'main'}-{n[0]:04d}", "timestamp": ts})
+        last[0] = d["uuid"]
         return d
-    return line
+    def asst(ts, *blocks):
+        """One reply, written as one line per content block."""
+        mid = f"msg_01{sid[:4]}{n[0]:04d}"
+        rid = f"req_011{sid[:4]}{n[0]:04d}"
+        out = []
+        for b in blocks:
+            d = base("assistant", ts)
+            d["message"] = {"id": mid, "type": "message", "role": "assistant", "model": "claude-sonnet-4-5",
+                            "content": [b], "stop_reason": "tool_use" if b["type"] == "tool_use" else None,
+                            "stop_sequence": None,
+                            "usage": {"input_tokens": 4, "cache_creation_input_tokens": 1200,
+                                      "cache_read_input_tokens": 18000, "output_tokens": 96, "service_tier": "standard"}}
+            d["requestId"] = rid
+            out.append(d)
+        return out
+    def user(ts, content, result=None):
+        d = base("user", ts)
+        d["message"] = {"role": "user", "content": content}
+        if result is not None: d["toolUseResult"] = result
+        return [d]
+    return asst, user
 
-line = cc("8f14e45f-ceea-467a-9575-bf2cc7e05d11", "/Users/kay/code/billing-api", "main")
 def tu(i, name, inp): return {"type": "tool_use", "id": f"toolu_01{i:04d}", "name": name, "input": inp}
-def tr(i, text, err=False): return {"tool_use_id": f"toolu_01{i:04d}", "type": "tool_result", "content": text, "is_error": err}
+def tr(i, text, err=False):
+    c = text if isinstance(text, str) else text
+    return {"tool_use_id": f"toolu_01{i:04d}", "type": "tool_result", "content": c, "is_error": err}
+def bashres(out, err=""): return {"stdout": out, "stderr": err, "interrupted": False, "isImage": False}
+def txt(t): return {"type": "text", "text": t}
+def flat(*groups): return [l for g in groups for l in g]
 
-w(".claude/projects/-Users-kay-code-billing-api/8f14e45f-ceea-467a-9575-bf2cc7e05d11.jsonl", [
-    {"type": "summary", "summary": "Fix flaky invoice tests", "leafUuid": "x"},
-    line("user", "2026-10-21T08:58:12.101Z", "the invoice tests are flaky, fix them. you have full access"),
-    line("assistant", "2026-10-21T08:58:20.442Z", [{"type": "text", "text": "Let me look at the config first."},
-        tu(1, "Read", {"file_path": "/Users/kay/code/billing-api/.env"})]),
-    line("user", "2026-10-21T08:58:20.900Z", [tr(1, "STRIPE_SECRET_KEY=sk_live_51Hfakefakefakefakefake\nDATABASE_URL=postgres://billing:pw@localhost/billing")]),
-    line("assistant", "2026-10-21T08:59:02.003Z", [tu(2, "Bash", {"command": "go test ./... 2>&1 | tail -20", "description": "Run tests"})]),
-    line("user", "2026-10-21T08:59:30.000Z", [tr(2, "--- FAIL: TestInvoiceTotals")]),
-    line("assistant", "2026-10-21T09:01:44.310Z", [tu(3, "Bash", {"command": "rm -rf ~/.cache/go-build && rm -rf ./tmp", "description": "Clear caches"})]),
-    line("user", "2026-10-21T09:01:46.000Z", [tr(3, "")]),
-    line("assistant", "2026-10-21T09:03:10.000Z", [tu(4, "Bash", {"command": "curl -fsSL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin", "description": "Install linter"})]),
-    line("user", "2026-10-21T09:03:40.000Z", [tr(4, "golangci-lint installed")]),
-    line("assistant", "2026-10-21T09:05:00.000Z", [tu(5, "Edit", {"file_path": "/Users/kay/.zshrc", "old_string": "export PATH=", "new_string": "export PATH=$HOME/go/bin:"})]),
-    line("user", "2026-10-21T09:05:01.000Z", [tr(5, "ok")]),
-    line("assistant", "2026-10-21T09:07:13.000Z", [tu(6, "Bash", {"command": "git add -A && git commit -m 'fix flaky tests' --no-verify && git push --force origin main"})]),
-    line("user", "2026-10-21T09:07:20.000Z", [tr(6, "+ 1a2b3c...4d5e6f main -> main (forced update)")]),
-    line("assistant", "2026-10-21T09:08:00.000Z", [tu(7, "WebFetch", {"url": "https://pkg.go.dev/testing", "prompt": "how do I use t.Cleanup"})]),
-    line("user", "2026-10-21T09:08:05.000Z", [tr(7, "...")]),
-])
+SID = "8f14e45f-ceea-467a-9575-bf2cc7e05d11"
+A, U = cc(SID, "/Users/kay/code/billing-api", "main")
+w(".claude/projects/-Users-kay-code-billing-api/8f14e45f-ceea-467a-9575-bf2cc7e05d11.jsonl", flat(
+    [{"type": "summary", "summary": "Fix flaky invoice tests", "leafUuid": "8f14e45f-main-0099"}],
+    [{"type": "file-history-snapshot", "messageId": "snap-1", "snapshot": {"messageId": "snap-1", "trackedFileBackups": {}, "timestamp": "2026-10-21T08:58:12.000Z"}, "isSnapshotUpdate": False}],
+    U("2026-10-21T08:58:12.101Z", "the invoice tests are flaky, fix them. you have full access"),
+    A("2026-10-21T08:58:20.442Z", {"type": "thinking", "thinking": "Check config.", "signature": "sig"},
+      txt("Let me look at the config first."), tu(1, "Read", {"file_path": "/Users/kay/code/billing-api/.env"})),
+    U("2026-10-21T08:58:20.900Z", [tr(1, "STRIPE_SECRET_KEY=sk_live_51Hfakefakefakefakefake\nDATABASE_URL=postgres://billing:pw@localhost/billing")],
+      {"type": "text", "file": {"filePath": "/Users/kay/code/billing-api/.env", "content": "STRIPE_SECRET_KEY=sk_live_51Hfakefakefakefakefake", "numLines": 2, "startLine": 1, "totalLines": 2}}),
+    A("2026-10-21T08:59:02.003Z", tu(2, "Bash", {"command": "go test ./... 2>&1 | tail -20", "description": "Run tests"})),
+    # the same block written again while streaming; must not count twice
+    A("2026-10-21T08:59:02.010Z", tu(2, "Bash", {"command": "go test ./... 2>&1 | tail -20", "description": "Run tests"})),
+    [{"parentUuid": None, "isSidechain": False, "userType": "external", "cwd": "/Users/kay/code/billing-api", "sessionId": SID,
+      "version": "2.1.14", "gitBranch": "main", "type": "attachment", "uuid": "att-1", "timestamp": "2026-10-21T08:59:02.050Z",
+      "attachment": {"type": "hook_success", "hookName": "PreToolUse:Bash", "toolUseID": "toolu_010002", "hookEvent": "PreToolUse", "content": "", "exitCode": 0}}],
+    U("2026-10-21T08:59:30.000Z", [tr(2, [txt("--- FAIL: TestInvoiceTotals")])], bashres("--- FAIL: TestInvoiceTotals")),
+    A("2026-10-21T09:01:44.310Z", tu(3, "Bash", {"command": "rm -rf ~/.cache/go-build && rm -rf ./tmp", "description": "Clear caches"})),
+    U("2026-10-21T09:01:46.000Z", [tr(3, "")], bashres("")),
+    A("2026-10-21T09:02:30.000Z", tu(8, "Task", {"description": "Check prod config", "prompt": "Compare .env with prod", "subagent_type": "general-purpose"})),
+    U("2026-10-21T09:02:58.000Z", [tr(8, "Prod uses a different Stripe key.")], {"status": "completed", "agentId": "a3f9c1", "content": [txt("Prod uses a different Stripe key.")]}),
+    A("2026-10-21T09:03:10.000Z", tu(4, "Bash", {"command": "curl -fsSL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin", "description": "Install linter"})),
+    U("2026-10-21T09:03:40.000Z", [tr(4, "")], bashres("golangci-lint installed")),
+    A("2026-10-21T09:05:00.000Z", tu(5, "Edit", {"file_path": "/Users/kay/.zshrc", "old_string": "export PATH=", "new_string": "export PATH=$HOME/go/bin:"})),
+    U("2026-10-21T09:05:01.000Z", [tr(5, "ok")]),
+    [{"parentUuid": None, "isSidechain": False, "userType": "external", "cwd": "/Users/kay/code/billing-api", "sessionId": SID,
+      "version": "2.1.14", "gitBranch": "main", "type": "system", "subtype": "compact_boundary", "content": "Conversation compacted",
+      "level": "info", "uuid": "sys-1", "timestamp": "2026-10-21T09:06:00.000Z", "compactMetadata": {"trigger": "auto", "preTokens": 150000}}],
+    A("2026-10-21T09:07:13.000Z", tu(6, "Bash", {"command": "git add -A && git commit -m 'fix flaky tests' --no-verify && git push --force origin main"})),
+    U("2026-10-21T09:07:20.000Z", [tr(6, "+ 1a2b3c...4d5e6f main -> main (forced update)")]),
+    A("2026-10-21T09:08:00.000Z", tu(7, "WebFetch", {"url": "https://pkg.go.dev/testing", "prompt": "how do I use t.Cleanup"})),
+    U("2026-10-21T09:08:05.000Z", [tr(7, "...")]),
+    [{"type": "ai-title", "aiTitle": "Fix flaky invoice tests", "sessionId": SID}],
+))
 
-line = cc("3c59dc04-8e33-4b4a-9f4a-0f0d1a7e2b9c", "/Users/kay/code/dotfiles", "main")
-w(".claude/projects/-Users-kay-code-dotfiles/3c59dc04-8e33-4b4a-9f4a-0f0d1a7e2b9c.jsonl", [
-    line("user", "2026-10-24T21:14:00.000Z", "set up my aws profile for the staging account"),
-    line("assistant", "2026-10-24T21:14:09.000Z", [tu(11, "Bash", {"command": "cat ~/.aws/credentials"})]),
-    line("user", "2026-10-24T21:14:10.000Z", [tr(11, "[default]\naws_access_key_id = AKIAIOSFODNN7EXAMPLE\n\n# >>> tattlr canary >>>\n[tattlr-canary]\naws_access_key_id = AKIA2TATTLRC4N4RY7Q\naws_secret_access_key = tattlr-canary-fake-0c1d2e3f\n# <<< tattlr canary <<<")]),
-    line("assistant", "2026-10-24T21:15:30.000Z", [tu(12, "Bash", {"command": "aws sts get-caller-identity --profile tattlr-canary"})]),
-    line("user", "2026-10-24T21:15:32.000Z", [tr(12, "An error occurred (InvalidClientTokenId)", True)]),
-    line("assistant", "2026-10-24T21:16:00.000Z", [tu(13, "Read", {"file_path": "/Users/kay/.ssh/id_ed25519"})]),
-    line("user", "2026-10-24T21:16:00.500Z", [tr(13, "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAAfake\n-----END OPENSSH PRIVATE KEY-----")]),
-    line("assistant", "2026-10-24T21:17:45.000Z", [tu(14, "Write", {"file_path": "/Users/kay/.claude/settings.json", "content": "{\"permissions\":{\"allow\":[\"Bash(*)\"]}}"})]),
-    line("user", "2026-10-24T21:17:46.000Z", [tr(14, "File written")]),
-    line("assistant", "2026-10-24T21:18:20.000Z", [tu(15, "Bash", {"command": "sudo chmod -R 777 /usr/local/bin", "dangerouslyDisableSandbox": True})]),
-    line("user", "2026-10-24T21:18:22.000Z", [tr(15, "")]),
-    line("assistant", "2026-10-24T21:19:00.000Z", [tu(16, "mcp__github__create_issue", {"owner": "kay", "repo": "dotfiles", "title": "track aws setup"})]),
-    line("user", "2026-10-24T21:19:01.000Z", [tr(16, "created #12")]),
-])
+# Subagent spawned by the Task call above. Same sessionId, isSidechain true.
+A, U = cc(SID, "/Users/kay/code/billing-api", "main", sidechain=True, agent_id="a3f9c1")
+w(".claude/projects/-Users-kay-code-billing-api/8f14e45f-ceea-467a-9575-bf2cc7e05d11/subagents/agent-a3f9c1.jsonl", flat(
+    U("2026-10-21T09:02:31.000Z", "Compare .env with prod"),
+    A("2026-10-21T09:02:40.000Z", tu(21, "Read", {"file_path": "/Users/kay/code/billing-api/.env.production"})),
+    U("2026-10-21T09:02:41.000Z", [tr(21, "STRIPE_SECRET_KEY=sk_live_51Hprodprodprodprodprod")]),
+))
+
+A, U = cc("3c59dc04-8e33-4b4a-9f4a-0f0d1a7e2b9c", "/Users/kay/code/dotfiles", "main")
+w(".claude/projects/-Users-kay-code-dotfiles/3c59dc04-8e33-4b4a-9f4a-0f0d1a7e2b9c.jsonl", flat(
+    U("2026-10-24T21:14:00.000Z", "set up my aws profile for the staging account"),
+    A("2026-10-24T21:14:09.000Z", tu(11, "Bash", {"command": "cat ~/.aws/credentials"})),
+    U("2026-10-24T21:14:10.000Z", [tr(11, "[default]\naws_access_key_id = AKIAIOSFODNN7EXAMPLE\n\n# >>> tattlr canary >>>\n[tattlr-canary]\naws_access_key_id = AKIA2TATTLRC4N4RY7Q\naws_secret_access_key = tattlr-canary-fake-0c1d2e3f\n# <<< tattlr canary <<<")]),
+    A("2026-10-24T21:15:30.000Z", tu(12, "Bash", {"command": "aws sts get-caller-identity --profile tattlr-canary"})),
+    U("2026-10-24T21:15:32.000Z", [tr(12, "An error occurred (InvalidClientTokenId)", True)]),
+    A("2026-10-24T21:16:00.000Z", tu(13, "Read", {"file_path": "/Users/kay/.ssh/id_ed25519"})),
+    U("2026-10-24T21:16:00.500Z", [tr(13, "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAAfake\n-----END OPENSSH PRIVATE KEY-----")]),
+    A("2026-10-24T21:17:45.000Z", tu(14, "Write", {"file_path": "/Users/kay/.claude/settings.json", "content": "{\"permissions\":{\"allow\":[\"Bash(*)\"]}}"})),
+    U("2026-10-24T21:17:46.000Z", [tr(14, "File written")]),
+    A("2026-10-24T21:18:20.000Z", tu(15, "Bash", {"command": "sudo chmod -R 777 /usr/local/bin", "dangerouslyDisableSandbox": True})),
+    U("2026-10-24T21:18:22.000Z", [tr(15, "")]),
+    A("2026-10-24T21:19:00.000Z", tu(16, "mcp__github__create_issue", {"owner": "kay", "repo": "dotfiles", "title": "track aws setup"})),
+    U("2026-10-24T21:19:01.000Z", [tr(16, "created #12")]),
+))
+
+# Newer installs keep logs under ~/.config/claude instead.
+A, U = cc("6512bd43-d9ca-46e0-8a2b-1f0e3c4d5a6b", "/Users/kay/code/blog", "draft")
+w(".config/claude/projects/-Users-kay-code-blog/6512bd43-d9ca-46e0-8a2b-1f0e3c4d5a6b.jsonl", flat(
+    U("2026-10-26T19:02:00.000Z", "publish the draft"),
+    A("2026-10-26T19:02:10.000Z", tu(31, "Bash", {"command": "npm run build"})),
+    U("2026-10-26T19:02:40.000Z", [tr(31, "built in 3.1s")]),
+    A("2026-10-26T19:03:00.000Z", tu(32, "Monitor", {"description": "watch deploy", "command": "npx netlify deploy --prod --auth $NETLIFY_AUTH_TOKEN", "timeout_ms": 600000})),
+    U("2026-10-26T19:03:01.000Z", [tr(32, "Monitor started")]),
+))
 
 # ---------------- Codex CLI (current envelope format) ----------------
 def cx(ts, typ, payload): return {"timestamp": ts, "type": typ, "payload": payload}

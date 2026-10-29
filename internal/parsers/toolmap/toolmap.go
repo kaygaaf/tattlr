@@ -16,6 +16,7 @@ var kinds = map[string]event.Kind{
 	"bash": event.Shell, "read": event.Read, "write": event.Write, "edit": event.Write,
 	"multiedit": event.Write, "notebookedit": event.Write, "notebookread": event.Read,
 	"webfetch": event.Fetch, "websearch": event.Fetch, "grep": event.Search, "glob": event.Search, "ls": event.Search,
+	"powershell": event.Shell, "monitor": event.Shell, "bashoutput": event.Other, "artifact": event.Fetch,
 	// Codex
 	"shell": event.Shell, "exec_command": event.Shell, "local_shell": event.Shell, "container.exec": event.Shell,
 	"apply_patch": event.Write, "web_search": event.Fetch, "view_image": event.Read,

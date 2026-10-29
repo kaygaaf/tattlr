@@ -106,6 +106,9 @@ func Run(o Options) (*Result, error) {
 			continue
 		}
 		st := &AgentStats{Agent: p.Agent(), BySeverity: map[string]int{}}
+		// Count sessions by id, not by file: Claude Code subagent
+		// transcripts live in their own files but share the parent's id.
+		seenSession := map[string]bool{}
 		for _, f := range p.Discover(o.Home) {
 			res.Logs++
 			s, err := p.Parse(f)
@@ -115,7 +118,6 @@ func Run(o Options) (*Result, error) {
 			if s == nil {
 				continue
 			}
-			counted := false
 			for _, e := range s.Events {
 				if !o.Since.IsZero() && !e.Time.IsZero() && e.Time.Before(o.Since) {
 					continue
@@ -123,8 +125,8 @@ func Run(o Options) (*Result, error) {
 				if o.Project != "" && !strings.Contains(strings.ToLower(e.Project), strings.ToLower(o.Project)) {
 					continue
 				}
-				if !counted {
-					counted = true
+				if !seenSession[s.ID] {
+					seenSession[s.ID] = true
 					st.Sessions++
 				}
 				st.ToolCalls++
