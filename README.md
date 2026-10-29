@@ -26,6 +26,9 @@ Pick one. They all give you the same single binary.
 # script: downloads the release for your OS, checks its sha256, puts it in ~/.local/bin
 curl -fsSL https://raw.githubusercontent.com/kaygaaf/tattlr/main/install.sh | sh
 
+# Homebrew, macOS or Linux
+brew install kaygaaf/tap/tattlr
+
 # npm (no postinstall script; the binary comes as a per-platform package)
 npm i -g tattlr
 
@@ -39,11 +42,7 @@ The script is short, so read it first if piping into `sh` makes you twitchy (it 
 
 `npx tattlr` works for a quick scan. For `tattlr protect`, install it for real, since the hooks remember where the binary lives and the npx cache gets cleaned up.
 
-**Coming soon, not live yet:** Homebrew. This won't work until the cask is up:
-
-```sh
-brew install kaygaaf/tap/tattlr
-```
+The macOS binary isn't signed by Apple, so the Homebrew cask clears the quarantine flag on install. Without that, macOS would say it's damaged and refuse to run it.
 
 ## Use it
 
