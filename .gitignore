@@ -4,11 +4,9 @@
 /bin/
 /dist/
 
-# rap sheet cards you made locally
-*.svg
-*.png
-!docs/*.svg
-!docs/*.png
+# rap sheet cards you made locally (repo root only)
+/*.svg
+/*.png
 
 # editors and OS junk
 .idea/
