@@ -228,6 +228,20 @@ Every checked call goes to `~/.local/state/tattlr/audit.jsonl`, one JSON line ea
 | OpenClaw | The plugin in [`integrations/openclaw`](integrations/openclaw) | Yes, via `requireApproval` | OpenClaw has no hook config file, so it's a small plugin that calls `tattlr hook openclaw` |
 | Gemini CLI | `BeforeTool` in `~/.gemini/settings.json` | Yes | Answers with `decision` deny or ask. Ask shows Gemini's own confirm prompt |
 
+### Tested with
+
+Each of these was run for real on one machine with `tattlr protect install` and canaries in place: the actual agent binary, pointed at a scripted model on 127.0.0.1 instead of a real provider account. In each run the agent followed a README with a prompt injection in it: it ran `ls`, read the canary, then tried to curl it to a listener on 127.0.0.1 (all but Codex also read the README with a tool first). The curl was blocked every time and the listener got nothing. The audit log had every call, and `tattlr scan` read the agent's own session log back correctly.
+
+| Agent | Version | How it ran |
+| --- | --- | --- |
+| Claude Code | 2.1.312 | `claude -p --dangerously-skip-permissions` |
+| Codex CLI | 0.165.0 | `codex exec`, after trusting the hook |
+| Gemini CLI | 0.66.0 | `gemini -p --yolo --skip-trust` |
+| OpenClaw | 2026.10.8 | `openclaw agent --local` with the plugin installed |
+| Cursor | not run | No Cursor app or account here, so only the config format is checked |
+
+So the hooks and parsers have been checked against the real binaries, but not how a real model reacts when it gets blocked. The real (redacted) logs from those runs are test fixtures in `testdata/live/`.
+
 ### Known gaps
 
 - Cursor can also run Claude Code's hooks ("third party hooks"). If you have both installed, a call in Cursor may get checked twice. The answer is the same, it just shows up twice in the audit log.
@@ -236,11 +250,14 @@ Every checked call goes to `~/.local/state/tattlr/audit.jsonl`, one JSON line ea
 - Codex can't ask on its own, and its built-in web search runs on OpenAI's side, so no hook sees it.
 - The approval inbox only works while `tattlr ui` is running. The hook doesn't start it for you.
 - strict mode's "block if tattlr fails" setting is written at install time. If you switch to or from strict, run `tattlr protect install` again.
-- The OpenClaw plugin follows OpenClaw's plugin docs, but I haven't run it inside a live gateway yet.
+- Codex only runs hooks you've trusted. `codex exec` skips an untrusted hook without saying anything, so until you open `/hooks` once and trust it, tattlr isn't checking anything. `tattlr protect status` tells you if the hook isn't trusted yet. Codex shows it as "Unnamed hook" because its config has no name field.
+- OpenClaw 2026.10 asks for consent before installing a local plugin and before letting it hook tool calls, so a scripted install needs `--force --accept-capabilities` (see the [plugin README](integrations/openclaw)).
+- OpenClaw doesn't tell plugins the working directory, so the plugin reports the gateway's own directory. Fine for `openclaw agent --local` in your project, maybe wrong for a long-running gateway.
 - Gemini CLI lets a call through if a hook crashes or times out, so strict mode's "block if tattlr fails" can't be enforced there. tattlr still blocks in strict mode when it runs and can't read the request.
 - If your `~/.gemini/settings.json` has comments in it, `tattlr protect` refuses to touch it. Take the comments out or add the hook by hand.
 - Gemini CLI also has its own TOML policy engine. tattlr doesn't write policies for it; the hook is enough.
-- I checked the Gemini hook contract against the docs and the source, including `ask`, which the source supports but the docs don't mention yet. I haven't run it against a signed-in Gemini CLI.
+- Gemini CLI's `ask` comes from the source, which still handles it, though the docs don't mention it. The live run only covered allow and deny.
+- Gemini CLI won't run headless (`-p`) in a folder you haven't trusted. Your user hooks still load either way, but you'll need to trust the folder or pass `--skip-trust`.
 - Hooks only see what the agent reports. A tool that spawns its own subprocesses can still do things tattlr never hears about. Scan the logs too.
 
 ## The web UI: tattlr ui
@@ -278,7 +295,7 @@ Only one `tattlr ui` runs at a time. Ctrl+C stops it and the hooks go back to th
 | Claude Code | `~/.claude/projects/**/*.jsonl` (`$CLAUDE_CONFIG_DIR` and `~/.config/claude` too), subagents, workflow agents and set-aside copies included | Checked against Anthropic's docs plus the ccusage, claude-code-log and claude-code-viewer source. Forked and resumed sessions copy old calls, so each call is counted once. Big outputs saved to `tool-results/` get read from there |
 | Codex CLI | `~/.codex/sessions/**/rollout-*.jsonl` (`$CODEX_HOME` too) | Checked against the Codex source, old and new formats |
 | Gemini CLI | `~/.gemini/tmp/*/chats/` | Checked against the Gemini CLI source, JSONL and the older JSON files |
-| OpenClaw | `~/.openclaw/agents/*/sessions/*.jsonl` (plus `.reset` archives) | JSONL transcripts only |
+| OpenClaw | `~/.openclaw/agents/*/agent/openclaw-agent.sqlite` (2026.10 and later), and the older `~/.openclaw/agents/*/sessions/*.jsonl` plus `.reset` archives | Checked against a real 2026.10.8 session. The database is opened read only |
 | Cursor | `~/.cursor/projects/*/agent-transcripts/` | Agent transcripts only. They have no timestamps, so the file time is used |
 
 If your logs look different and tattlr misses things, please open an issue with a redacted snippet.
@@ -290,7 +307,7 @@ Everything happens on your machine. tattlr reads log files, prints a report and 
 ## Roadmap
 
 - An MCP proxy for tools that have no hooks
-- OpenClaw and Cursor SQLite session stores, more rules and a `--watch` mode
+- Cursor's SQLite chat store, more rules and a `--watch` mode
 
 ## Development
 
