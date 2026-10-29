@@ -80,7 +80,11 @@ func Text(w io.Writer, r *scan.Result, o TextOptions) {
 
 	if r.ToolCalls == 0 {
 		protectSection(w, r, o, p)
-		fmt.Fprintln(w, " No agent activity found. Either your agents are saints or tattlr looked in the wrong place.")
+		if r.Protect != nil {
+			fmt.Fprintln(w, " No agent session logs found, only the live hook log above.")
+		} else {
+			fmt.Fprintln(w, " No agent activity found. Either your agents are saints or tattlr looked in the wrong place.")
+		}
 		fmt.Fprintln(w, dim(" Looked for Claude Code, Codex, Gemini CLI, OpenClaw and Cursor logs under "+tilde(r.HomeDir())))
 		fmt.Fprintln(w)
 		return
