@@ -19,14 +19,24 @@ type adapter struct {
 	parse func([]byte) (call, error)
 	// write prints the answer and returns the exit code.
 	write func(io.Writer, call, policy.Decision, string) int
+	// canAsk reports whether the agent shows its own prompt for ask.
+	canAsk func(call) bool
+}
+
+func always(call) bool { return true }
+func never(call) bool  { return false }
+
+// cursorCanAsk: Cursor only honours ask on its shell and MCP hooks.
+func cursorCanAsk(c call) bool {
+	return c.hookEvent == "beforeShellExecution" || c.hookEvent == "beforeMCPExecution"
 }
 
 var adapters = map[string]adapter{
-	"claude":   {parseClaude, writeClaude},
-	"codex":    {parseCodex, writeCodex},
-	"cursor":   {parseCursor, writeCursor},
-	"gemini":   {parseGemini, writeGemini},
-	"openclaw": {parseOpenClaw, writeOpenClaw},
+	"claude":   {parseClaude, writeClaude, always},
+	"codex":    {parseCodex, writeCodex, never},
+	"cursor":   {parseCursor, writeCursor, cursorCanAsk},
+	"gemini":   {parseGemini, writeGemini, always},
+	"openclaw": {parseOpenClaw, writeOpenClaw, always},
 }
 
 func decode(raw []byte) (map[string]any, error) {
@@ -246,8 +256,7 @@ func parseCursor(raw []byte) (call, error) {
 
 func writeCursor(w io.Writer, c call, d policy.Decision, reason string) int {
 	a := d.Action
-	native := c.hookEvent == "beforeShellExecution" || c.hookEvent == "beforeMCPExecution"
-	if a == policy.Ask && !native {
+	if a == policy.Ask && !cursorCanAsk(c) {
 		a = policy.Deny
 		reason = strings.TrimSuffix(reason, " tattlr wants a human to OK this.") +
 			" tattlr wants a human to OK this, and this Cursor hook cannot ask, so it is blocked." +

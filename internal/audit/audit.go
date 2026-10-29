@@ -29,7 +29,10 @@ type Entry struct {
 	Severity  string    `json:"severity,omitempty"`
 	Reason    string    `json:"reason,omitempty"`
 	Tainted   bool      `json:"tainted,omitempty"` // this call touched a canary
-	Error     string    `json:"error,omitempty"`
+	// Approval is set when the ask went to tattlr ui: approved, denied or
+	// timed out.
+	Approval string `json:"approval,omitempty"`
+	Error    string `json:"error,omitempty"`
 }
 
 // Append writes one entry. The file is private to the user (0600) and is

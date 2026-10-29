@@ -13,9 +13,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kaygaaf/tattlr/internal/approval"
 	"github.com/kaygaaf/tattlr/internal/audit"
 	"github.com/kaygaaf/tattlr/internal/config"
 	"github.com/kaygaaf/tattlr/internal/event"
+	"github.com/kaygaaf/tattlr/internal/notify"
 	"github.com/kaygaaf/tattlr/internal/policy"
 	"github.com/kaygaaf/tattlr/internal/redact"
 	"github.com/kaygaaf/tattlr/internal/rules"
@@ -30,8 +32,14 @@ type Options struct {
 	Home string
 	Bin  string // the tattlr binary, protected from edits
 	Now  func() time.Time
-	// NoLog skips the audit log (used by the self-test in protect status).
+	// NoLog skips the audit log, approvals and notifications (used by the
+	// self-test in protect status).
 	NoLog bool
+	// Approver asks tattlr ui about an ask the agent can't show. nil means
+	// approval.Ask.
+	Approver func(approval.Request, time.Duration) (string, error)
+	// Notifier shows a desktop notification. nil means notify.Send.
+	Notifier func(title, body string) error
 }
 
 // call is what an adapter pulls out of the agent's payload.
@@ -94,16 +102,32 @@ func RunResult(agent string, in io.Reader, out, errw io.Writer, o Options) Resul
 	}
 
 	d, ev := judge(c, pol, o)
+	evidence := rules.Evidence(ev)
+	if len(c.events) > 1 {
+		evidence = redact.Line(fmt.Sprintf("%s (%d files)", evidence, len(c.events)), 300)
+	}
+	var answer string
+	if d.Action == policy.Ask && !ad.canAsk(c) && pol.ApprovalTimeout > 0 && !o.NoLog {
+		d, answer = askUI(c, d, ev, evidence, pol, o, errw)
+	}
 	reason := explain(d, c)
+	if answer == approval.Deny {
+		reason = "tattlr: " + d.Reason + ". The user denied this in tattlr ui. Do not retry it another way; ask the user what they want instead."
+	}
 	exit := ad.write(out, c, d, reason)
+	if pol.Notify && !o.NoLog && (d.Action == policy.Deny || d.Action == policy.Ask && !ad.canAsk(c)) && answer != approval.Deny {
+		send(o, "tattlr blocked "+agentName(c.agent), firstSentence(d.Reason)+": "+evidence)
+	}
 	if !o.NoLog {
 		e := audit.Entry{
 			Time: o.Now().UTC(), Agent: c.agent, HookEvent: c.hookEvent, Session: c.session, Cwd: c.cwd,
-			Tool: c.tool, Kind: string(ev.Kind), Evidence: rules.Evidence(ev), Decision: d.Action.String(),
+			Tool: c.tool, Kind: string(ev.Kind), Evidence: evidence, Decision: d.Action.String(),
 			Mode: string(pol.Mode), Rules: d.Rules, Reason: d.Reason, Tainted: d.Taints,
+			Approval: map[string]string{approval.Approve: "approved", approval.Deny: "denied", approval.Timeout: "timed out"}[answer],
 		}
-		if len(c.events) > 1 {
-			e.Evidence = redact.Line(fmt.Sprintf("%s (%d files)", e.Evidence, len(c.events)), 300)
+		if d.Action == policy.Ask && !ad.canAsk(c) {
+			// The agent got a deny; log what really happened.
+			e.Decision = policy.Deny.String()
 		}
 		if d.Severity > 0 {
 			e.Severity = d.Severity.String()
@@ -119,6 +143,63 @@ func RunResult(agent string, in io.Reader, out, errw io.Writer, o Options) Resul
 		}
 	}
 	return Result{Decision: d, Mode: pol.Mode, Exit: exit}
+}
+
+// askUI hands an ask the agent can't show to tattlr ui and waits for a
+// click. With no UI running it returns right away and the policy stands.
+func askUI(c call, d policy.Decision, ev event.Event, evidence string, pol *policy.Policy, o Options, errw io.Writer) (policy.Decision, string) {
+	req := approval.Request{Time: o.Now().UTC(), Agent: c.agent, Tool: c.tool, Kind: string(ev.Kind), Cwd: c.cwd,
+		Session: c.session, Evidence: evidence, Reason: d.Reason, Rules: d.Rules}
+	if d.Severity > 0 {
+		req.Severity = d.Severity.String()
+	}
+	ask := o.Approver
+	if ask == nil {
+		ask = func(r approval.Request, t time.Duration) (string, error) { return approval.Ask(o.Home, r, t) }
+	}
+	if pol.Notify {
+		send(o, "tattlr wants an OK", agentName(c.agent)+": "+firstSentence(d.Reason)+". Approve or deny it in tattlr ui.")
+	}
+	got, err := ask(req, pol.ApprovalTimeout)
+	if err != nil {
+		if err != approval.ErrNotRunning {
+			fmt.Fprintln(errw, "tattlr: could not reach tattlr ui:", err)
+		}
+		return d, ""
+	}
+	switch got {
+	case approval.Approve:
+		d.Action = policy.Allow
+		d.Reason += " (approved in tattlr ui)"
+	case approval.Deny:
+		d.Action = policy.Deny
+	}
+	return d, got
+}
+
+// send shows a desktop notification and never fails the hook.
+func send(o Options, title, body string) {
+	n := o.Notifier
+	if n == nil {
+		n = notify.Send
+	}
+	_ = n(title, body)
+}
+
+func agentName(a string) string {
+	switch a {
+	case event.AgentClaude:
+		return "Claude Code"
+	case event.AgentCodex:
+		return "Codex"
+	case event.AgentCursor:
+		return "Cursor"
+	case event.AgentGemini:
+		return "Gemini CLI"
+	case event.AgentOpenClaw:
+		return "OpenClaw"
+	}
+	return a
 }
 
 // judge runs the rules over every event in the call and decides.
