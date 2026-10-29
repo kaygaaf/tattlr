@@ -187,7 +187,7 @@ func runScan(args []string, env Env) int {
 		}
 	} else {
 		color := env.TTY && !*noColor && env.Getenv("NO_COLOR") == "" && env.Getenv("TERM") != "dumb"
-		if env.Getenv("FORCE_COLOR") != "" && !*noColor {
+		if f := env.Getenv("FORCE_COLOR"); f != "" && f != "0" && !*noColor {
 			color = true
 		}
 		report.Text(env.Stdout, res, report.TextOptions{Color: color, Top: *top, Moments: *moments})
