@@ -48,7 +48,7 @@ homebrew_casks:
   - name: tattlr
     binaries: [tattlr]
     homepage: https://github.com/kaygaaf/tattlr
-    description: "Tells on your AI coding agents. Reads their logs, blocks the sketchy stuff live."
+    description: "Tells on your AI coding agents. Reads their logs, blocks the sketchy stuff live"
     license: MIT
     directory: Casks
     skip_upload: '{{ if index .Env "HOMEBREW_TAP_TOKEN" }}false{{ else }}true{{ end }}'
