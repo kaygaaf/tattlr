@@ -3,6 +3,7 @@ package cli
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -37,6 +38,8 @@ type Env struct {
 	InTTY  bool // stdin is a terminal
 	Getenv func(string) string
 	Bin    string // absolute path of this tattlr binary
+	// Ctx stops long-running commands (tattlr ui). nil means Ctrl+C does.
+	Ctx context.Context
 }
 
 // OSEnv builds an Env from the real process.
@@ -66,9 +69,10 @@ const usage = `tattlr: keep YOLO mode, get a tattletale.
 Usage:
   tattlr scan [flags]      read local agent logs and print a rap sheet
   tattlr trap [flags]      plant fake credentials that agents should never touch
-  tattlr protect install   hook tattlr into Claude Code, Codex and Cursor so it can block live
+  tattlr protect install   hook tattlr into Claude Code, Codex, Cursor and Gemini CLI so it can block live
   tattlr protect status    show what is hooked up and what tattlr stopped lately
   tattlr protect uninstall take the hooks back out
+  tattlr ui                a local web page: live timeline, rap sheet, approval inbox
   tattlr hook <agent>      what the agent hooks call (reads one tool call as JSON on stdin)
   tattlr rules             list what tattlr looks for
   tattlr version
@@ -96,6 +100,8 @@ func Run(args []string, env Env) int {
 		return runProtect(args[1:], env)
 	case "hook":
 		return runHook(args[1:], env)
+	case "ui":
+		return runUI(args[1:], env)
 	case "version", "--version", "-v":
 		fmt.Fprintln(env.Stdout, "tattlr", Version)
 		return 0
