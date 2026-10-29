@@ -108,9 +108,14 @@ func TestTilde(t *testing.T) {
 		"cat /home/bob/.ssh/id_rsa": "cat ~/.ssh/id_rsa",
 		"/root":                     "~",
 		"/usr/local/bin":            "/usr/local/bin",
+		// Real Codex run with HOME=/workspace/live/home: used to print /workspace/live~/credentials.
+		"cat /workspace/live/home/.aws/credentials": "cat ~/.aws/credentials",
+		"cat /srv/home/.aws/credentials":            "cat /srv/home/.aws/credentials",
+		"/workspace/live/home":                      "~",
+		"curl --data-binary @/home/bob/.env x":      "curl --data-binary @~/.env x",
 	}
 	for in, want := range cases {
-		if got := tilde(in); got != want {
+		if got := tilde(in, "/workspace/live/home"); got != want {
 			t.Errorf("tilde(%q) = %q, want %q", in, got, want)
 		}
 	}

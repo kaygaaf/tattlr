@@ -85,7 +85,7 @@ func Text(w io.Writer, r *scan.Result, o TextOptions) {
 		} else {
 			fmt.Fprintln(w, " No agent activity found. Either your agents are saints or tattlr looked in the wrong place.")
 		}
-		fmt.Fprintln(w, dim(" Looked for Claude Code, Codex, Gemini CLI, OpenClaw and Cursor logs under "+tilde(r.HomeDir())))
+		fmt.Fprintln(w, dim(" Looked for Claude Code, Codex, Gemini CLI, OpenClaw and Cursor logs under "+tilde(r.HomeDir(), r.HomeDir())))
 		fmt.Fprintln(w)
 		return
 	}
@@ -144,13 +144,17 @@ func Text(w io.Writer, r *scan.Result, o TextOptions) {
 		if !e.Time.IsZero() {
 			when = e.Time.In(o.Loc).Format("Jan 02 15:04")
 		}
-		proj := tilde(e.Project)
+		proj := tilde(e.Project, r.HomeDir())
 		if proj == "" {
 			proj = "unknown project"
 		}
 		fmt.Fprintf(w, " %s  %s  %s  %s\n", p.sev(m.Severity, sevLabel[m.Severity]), when, bold(e.Agent), dim(proj))
-		fmt.Fprintf(w, "       %s\n", strings.Join(m.Titles, ", "))
-		fmt.Fprintf(w, "       %s\n", p.c("36", clip(tilde(m.Evidence), o.Width-7)))
+		titles := strings.Join(m.Titles, ", ")
+		if m.Blocked {
+			titles += p.c("1;32", "  (tried it, tattlr blocked it)")
+		}
+		fmt.Fprintf(w, "       %s\n", titles)
+		fmt.Fprintf(w, "       %s\n", p.c("36", clip(tilde(m.Evidence, r.HomeDir()), o.Width-7)))
 	}
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, " %s\n", dim(footer(r)))
@@ -190,7 +194,7 @@ func protectSection(w io.Writer, r *scan.Result, o TextOptions, p painter) {
 		}
 		fmt.Fprintf(w, " %s  %s  %s  %s\n", p.c(color, label), e.Time.In(o.Loc).Format("Jan 02 15:04"), bold(e.Agent),
 			strings.Join(titles, ", "))
-		fmt.Fprintf(w, "          %s\n", p.c("36", clip(tilde(e.Evidence), o.Width-10)))
+		fmt.Fprintf(w, "          %s\n", p.c("36", clip(tilde(e.Evidence, r.HomeDir()), o.Width-10)))
 	}
 	fmt.Fprintln(w)
 }
@@ -238,11 +242,22 @@ func plural(n int, word string) string {
 	return fmt.Sprintf("%d %ss", n, word)
 }
 
-var homeRe = regexp.MustCompile(`(?:/Users/[^/\s'"]+|/home/[^/\s'"]+|/root)(/|\b)`)
+// homeRe only matches where a path starts, so /srv/home/.aws stays as is.
+var homeRe = regexp.MustCompile(`(^|[\s'"=@:(])(?:/Users/[^/\s'"]+|/home/[^/\s'"]+|/root)(/|\b)`)
 
 // tilde shortens home paths to ~ so screenshots do not leak usernames.
-func tilde(s string) string {
-	return homeRe.ReplaceAllString(s, "~$1")
+// The scanned home comes first, since it can live anywhere.
+func tilde(s, home string) string {
+	if home = strings.TrimSuffix(home, "/"); home != "" && home != "/" {
+		if s == home {
+			return "~"
+		}
+		s = strings.ReplaceAll(s, home+"/", "~/")
+		if strings.HasSuffix(s, " "+home) {
+			s = strings.TrimSuffix(s, home) + "~"
+		}
+	}
+	return homeRe.ReplaceAllString(s, "${1}~${2}")
 }
 
 func clip(s string, n int) string {
