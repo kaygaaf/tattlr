@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security problem (a way around tattlr, or a leaked secret)
+    url: https://github.com/kaygaaf/tattlr/security/advisories/new
+    about: Please report these privately, not as a public issue.

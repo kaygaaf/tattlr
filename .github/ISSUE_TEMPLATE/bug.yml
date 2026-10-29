@@ -1,0 +1,38 @@
+name: Bug
+description: Something broke or looks wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: And what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to make it happen
+      placeholder: |
+        1. tattlr protect install --agent claude
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: tattlr version
+      description: Output of `tattlr version`
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: OS and agent
+      placeholder: macOS 15, Claude Code 2.1.300
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: Take out any real secrets, paths or project names you don't want public.
+      render: text

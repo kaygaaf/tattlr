@@ -1,0 +1,21 @@
+name: My agent's logs aren't read
+description: tattlr scan misses sessions, or an agent version changed its log format
+labels: [parsers]
+body:
+  - type: input
+    id: agent
+    attributes:
+      label: Agent and version
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where the logs are on your machine
+      placeholder: ~/.codex/sessions/2026/10/...
+  - type: textarea
+    id: snippet
+    attributes:
+      label: A redacted snippet
+      description: A few lines with at least one tool call. Swap out secrets, paths and prompts you don't want public.
+      render: text

@@ -1,0 +1,30 @@
+name: Missed something or flagged the wrong thing
+description: A rule that should have fired and didn't, or fired when it shouldn't
+labels: [rules]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Which one
+      options:
+        - It missed something risky
+        - It flagged something harmless
+    validations:
+      required: true
+  - type: textarea
+    id: call
+    attributes:
+      label: The tool call or command
+      description: Redact real secrets. A fake key that looks the same is perfect.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it should or shouldn't be flagged
+  - type: input
+    id: agent
+    attributes:
+      label: Agent and version
+      placeholder: Codex CLI 0.165.0
