@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.1 (2026-11-06)
+
+- `go install` and `tattlr version` print the version without a leading `v`.
+- `tattlr scan --card file.png` writes a PNG itself, so you don't need rsvg-convert, resvg or Chrome for that.
+- The share card now shows the overall score next to the flagged-call count.
+- On Windows arm64, `npm i -g tattlr` downloads the binary from the GitHub release. npm's filter blocks that platform package name.
+
 ## v0.1.0 (2026-10-29)
 
 First release.
