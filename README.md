@@ -52,7 +52,7 @@ tattlr scan --since 7d        # just the last week
 tattlr scan --agent claude    # one agent (claude, codex, gemini, openclaw, cursor)
 tattlr scan --project billing # projects whose path contains "billing"
 tattlr scan --json            # everything, machine readable
-tattlr scan --card sheet.png  # a shareable card (or sheet.svg)
+tattlr scan --card sheet.png  # a shareable card (sheet.svg works too)
 tattlr scan --fail-on high    # exit 1 if anything high or worse shows up
 tattlr rules                  # list every rule and its severity
 tattlr trap                   # plant fake credentials as bait
@@ -62,6 +62,8 @@ tattlr ui                     # live timeline and approval inbox in your browser
 ```
 
 On a machine with no agent logs yet, `tattlr` tells you what it does and what to run first.
+
+`--card` writes a 1200x675 image with the totals and the overall score. No commands, paths or project names, so it's safe to post. PNG comes out of the binary itself; you don't need extra tools for that.
 
 ## What it looks like
 

@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
+	"image/png"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -217,5 +220,89 @@ func TestQuipBlocked(t *testing.T) {
 	r.Moments = append(r.Moments, scan.Moment{Rules: []string{"exfil"}})
 	if onlyAttempts(r, "exfil") {
 		t.Error("one unblocked moment means it happened")
+	}
+}
+
+func TestCardShowsScore(t *testing.T) {
+	res := result(t)
+	if res.Score == 0 {
+		t.Fatal("fixture should have a score")
+	}
+	var b bytes.Buffer
+	if err := Card(&b, res, time.UTC); err != nil {
+		t.Fatal(err)
+	}
+	out := b.String()
+	if !strings.Contains(out, ">SCORE</text>") {
+		t.Error("missing SCORE label")
+	}
+	if !strings.Contains(out, fmt.Sprintf(">%d</text>", res.Score)) {
+		t.Errorf("missing score %d", res.Score)
+	}
+	if !strings.Contains(out, ">FLAGGED CALLS</text>") {
+		t.Error("missing flagged label")
+	}
+}
+
+func TestWriteCardSVG(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sheet.svg")
+	if err := WriteCard(path, result(t), time.UTC); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(b, []byte("<svg")) || !bytes.Contains(b, []byte("TATTLR")) {
+		t.Fatalf("not an svg card: %q", b[:min(len(b), 80)])
+	}
+}
+
+func TestWriteCardPNG(t *testing.T) {
+	t.Setenv("PATH", "")
+	path := filepath.Join(t.TempDir(), "sheet.png")
+	if err := WriteCard(path, result(t), time.UTC); err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	img, err := png.Decode(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := img.Bounds()
+	if b.Dx() != cardW*pngScale || b.Dy() != cardH*pngScale {
+		t.Fatalf("size %dx%d, want %dx%d", b.Dx(), b.Dy(), cardW*pngScale, cardH*pngScale)
+	}
+	at := func(x, y int) string {
+		r, g, bl, a := img.At(x, y).RGBA()
+		return fmt.Sprintf("#%02x%02x%02x%02x", r>>8, g>>8, bl>>8, a>>8)
+	}
+	// Dark background, red strip at the top.
+	bg := at(20, 40)
+	if bg[:7] != "#101216" {
+		t.Errorf("background %s", bg)
+	}
+	top := at(100, 2)
+	if top[:7] != "#ff3b3b" {
+		t.Errorf("top bar %s", top)
+	}
+}
+
+func TestCardBlockedLive(t *testing.T) {
+	res := result(t)
+	res.Protect = &scan.ProtectStats{Blocked: 3}
+	var b bytes.Buffer
+	if err := Card(&b, res, time.UTC); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(b.String(), ">BLOCKED LIVE</text>") {
+		t.Error("missing blocked live")
+	}
+	if !strings.Contains(b.String(), ">3</text>") {
+		t.Error("missing blocked count")
 	}
 }

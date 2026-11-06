@@ -2,7 +2,6 @@ package report
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"html"
 	"io"
@@ -28,6 +27,14 @@ var sevColor = map[rules.Severity]string{
 const (
 	cardW = 1200
 	cardH = 675
+
+	statFlaggedX      = 60
+	statScoreX        = 250
+	statCritX         = 430
+	statHighX         = 590
+	statWorstX        = 750
+	statBlockedX      = 740
+	statWorstBlockedX = 880
 )
 
 // Card writes a 1200x675 SVG share card.
@@ -56,28 +63,20 @@ func Card(w io.Writer, r *scan.Result, loc *time.Location) error {
 		f(`<text x="60" y="168" font-size="23" fill="#f5c542">%s</text>`+"\n", esc(clip(q, 76)))
 	}
 
-	// Big numbers.
-	crit, high := 0, 0
-	for _, a := range r.Agents {
-		crit += a.BySeverity["critical"]
-		high += a.BySeverity["high"]
-	}
-	worst := "nobody"
-	if len(r.Agents) > 0 && r.Agents[0].Score > 0 {
-		worst = r.Agents[0].Agent
-	}
+	crit, high, blocked, worst, showBlocked := cardHeadline(r)
 	const sy = 252
 	stat := func(x int, value, label, color string) {
 		f(`<text x="%d" y="%d" font-size="60" font-weight="700" fill="%s">%s</text>`+"\n", x, sy, color, esc(value))
 		f(`<text x="%d" y="%d" font-size="17" fill="#8a93a6" letter-spacing="1">%s</text>`+"\n", x, sy+32, esc(strings.ToUpper(label)))
 	}
-	stat(60, fmt.Sprint(r.Flagged), "flagged calls", "#f2f4f8")
-	stat(300, fmt.Sprint(crit), "critical", sevColor[rules.Critical])
-	stat(470, fmt.Sprint(high), "high", sevColor[rules.High])
-	wx := 640
-	if ps := r.Protect; ps != nil && ps.Blocked > 0 {
-		stat(620, fmt.Sprint(ps.Blocked), "blocked live", "#5fd38d")
-		wx = 840
+	stat(statFlaggedX, fmt.Sprint(r.Flagged), "flagged calls", "#f2f4f8")
+	stat(statScoreX, fmt.Sprint(r.Score), "score", "#f2f4f8")
+	stat(statCritX, fmt.Sprint(crit), "critical", sevColor[rules.Critical])
+	stat(statHighX, fmt.Sprint(high), "high", sevColor[rules.High])
+	wx := statWorstX
+	if showBlocked {
+		stat(statBlockedX, fmt.Sprint(blocked), "blocked live", "#5fd38d")
+		wx = statWorstBlockedX
 	}
 	worstSize := 44
 	if len(worst)*27 > 1140-wx {
@@ -143,6 +142,22 @@ func Card(w io.Writer, r *scan.Result, loc *time.Location) error {
 	return err
 }
 
+// cardHeadline is the top row of numbers shared by the SVG and PNG cards.
+func cardHeadline(r *scan.Result) (crit, high, blocked int, worst string, showBlocked bool) {
+	for _, a := range r.Agents {
+		crit += a.BySeverity["critical"]
+		high += a.BySeverity["high"]
+	}
+	worst = "nobody"
+	if len(r.Agents) > 0 && r.Agents[0].Score > 0 {
+		worst = r.Agents[0].Agent
+	}
+	if r.Protect != nil && r.Protect.Blocked > 0 {
+		return crit, high, r.Protect.Blocked, worst, true
+	}
+	return crit, high, 0, worst, false
+}
+
 // cardQuip is the headline joke without numbers that could look odd out of
 // context. Empty when nothing was flagged.
 func cardQuip(r *scan.Result) string {
@@ -156,9 +171,9 @@ func cardSubtitle(r *scan.Result, loc *time.Location) string {
 	return summaryLine(r, loc, true)
 }
 
-// WriteCard writes the card to path. A .png path is rendered at 2x from the
-// SVG with rsvg-convert, resvg, inkscape, ImageMagick or Chrome, whichever is
-// installed first in that order.
+// WriteCard writes the card to path. A .png path is rendered at 2x: first
+// with rsvg-convert, resvg, inkscape, ImageMagick or Chrome if one of those
+// is installed, otherwise with the bundled font so PNG works out of the box.
 func WriteCard(path string, r *scan.Result, loc *time.Location) error {
 	var buf bytes.Buffer
 	if err := Card(&buf, r, loc); err != nil {
@@ -197,9 +212,6 @@ func WriteCard(path string, r *scan.Result, loc *time.Location) error {
 		}
 		return nil
 	}
-	svg := strings.TrimSuffix(path, filepath.Ext(path)) + ".svg"
-	if err := os.WriteFile(svg, buf.Bytes(), 0o644); err != nil {
-		return err
-	}
-	return errors.New("no SVG to PNG converter found (install rsvg-convert, resvg or Chrome); wrote " + svg + " instead")
+	// No converter on PATH: draw the same card with the bundled Go Mono font.
+	return writePNG(path, r, loc)
 }

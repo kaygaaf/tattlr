@@ -137,7 +137,7 @@ func runScan(args []string, env Env) int {
 	fs.Var(&agents, "agent", "only these agents (claude, codex, gemini, openclaw, cursor); repeat or comma separate")
 	project := fs.String("project", "", "only projects whose path contains this")
 	asJSON := fs.Bool("json", false, "print JSON instead of the rap sheet")
-	card := fs.String("card", "", "also write a shareable card to this file (.svg, or .png if rsvg-convert, resvg or Chrome is installed)")
+	card := fs.String("card", "", "also write a shareable card to this file (.svg or .png)")
 	noColor := fs.Bool("no-color", false, "turn off colors")
 	home := fs.String("home", env.Home, "home folder to look in")
 	top := fs.Int("top", 8, "how many offenses to list")
