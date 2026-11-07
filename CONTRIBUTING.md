@@ -29,7 +29,12 @@ Rules live in `internal/rules`. Each one needs a test with a command that should
 
 ## Adding or fixing a parser
 
-Parsers live in `internal/parsers/<agent>`. Put a redacted real log in `testdata/` and test against it. Say which agent version it came from.
+Parsers live in `internal/parsers/<agent>`. Test data lives at the repo root, not next to the parser:
+
+- `testdata/home` holds made-up logs in each agent's real file layout. They're written by `scripts/gen_fixtures.py`, so edit that and rerun it (`python3 scripts/gen_fixtures.py` from the repo root) instead of hand-editing the files.
+- `testdata/live/<agent>-<version>` holds redacted logs from a real run of that agent version, read by the parser's `live_test.go`. Swap real paths and keys for fake ones before committing.
+
+If a new agent version changes the log format, add a new `live` folder for it rather than replacing the old one, so older versions keep working.
 
 ## Commit style
 
