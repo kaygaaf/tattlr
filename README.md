@@ -38,7 +38,7 @@ go install github.com/kaygaaf/tattlr/cmd/tattlr@latest
 
 Or grab an archive from the [releases page](https://github.com/kaygaaf/tattlr/releases) and check it against `checksums.txt` yourself.
 
-The script is short, so read it first if piping into `sh` makes you twitchy (it should, that's one of the rules). `TATTLR_VERSION=v0.1.0` pins a version and `TATTLR_INSTALL_DIR=/usr/local/bin` changes where it goes.
+The script is short, so read it first if piping into `sh` makes you twitchy (it should, that's one of the rules). `TATTLR_VERSION=v0.1.1` pins a version and `TATTLR_INSTALL_DIR=/usr/local/bin` changes where it goes.
 
 `npx tattlr` works for a quick scan. For `tattlr protect`, install it for real, since the hooks remember where the binary lives and the npx cache gets cleaned up.
 
