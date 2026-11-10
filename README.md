@@ -65,6 +65,8 @@ On a machine with no agent logs yet, `tattlr` tells you what it does and what to
 
 `--card` writes a 1200x675 image with the totals and the overall score. No commands, paths or project names, so it's safe to post. PNG comes out of the binary itself; you don't need extra tools for that.
 
+`--fail-on` is handy on a machine that runs agents unattended. Put `tattlr scan --since 1d --fail-on high` in a cron job or a CI step and the exit code tells you when something bad happened.
+
 ## What it looks like
 
 This is real output from the fixture logs in `testdata/home`, which has a couple of sessions per agent full of bad behavior:
