@@ -69,6 +69,29 @@ On a machine with no agent logs yet, `tattlr` tells you what it does and what to
 
 `--fail-on` is handy on a machine that runs agents unattended. Put `tattlr scan --since 1d --fail-on high` in a cron job or a CI step and the exit code tells you when something bad happened.
 
+## In CI: the GitHub Action
+
+If a workflow runs Claude Code, Codex or Gemini CLI, the session logs end up in the runner's home folder. [tattlr-action](https://github.com/kaygaaf/tattlr-action) reads them after the agent step, puts the rap sheet in the job summary and can fail the job. Copy this into the job that runs your agent:
+
+```yaml
+permissions:
+  contents: read
+  security-events: write   # only for upload-sarif
+
+steps:
+  - uses: actions/checkout@v4
+
+  # ...the step that runs your agent...
+
+  - uses: kaygaaf/tattlr-action@v1
+    if: always()           # check runs where the agent step failed too
+    with:
+      fail-on: high        # fail the job on high or critical findings
+      upload-sarif: true   # findings show up under Security > Code scanning
+```
+
+It downloads the release binary, checks it against `checksums.txt`, and works on Linux, macOS and Windows runners. Inputs, outputs and more examples are in the [action's README](https://github.com/kaygaaf/tattlr-action#inputs). Not on GitHub? `tattlr scan --fail-on high --format sarif > tattlr.sarif` does the same job in any CI.
+
 ## What it looks like
 
 ![tattlr scan listing risky tool calls from five agents, then exiting 1 with --fail-on high](docs/scan.svg)

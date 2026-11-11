@@ -64,3 +64,27 @@ jobs:
         run: sh -n install.sh && sh scripts/test-install.sh
       - name: npm launcher
         run: cd npm && npm test && node scripts/build-packages.mjs
+
+  action:
+    # Our own GitHub Action (kaygaaf/tattlr-action) against the fixture
+    # logs, then against this runner's home, which should be clean.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - id: fixtures
+        name: tattlr-action on testdata/home
+        uses: kaygaaf/tattlr-action@v1
+        with:
+          path: testdata/home
+      - name: fixtures produce findings
+        run: test "${{ steps.fixtures.outputs.findings }}" -gt 0
+      - name: tattlr-action on the runner
+        uses: kaygaaf/tattlr-action@v1
+        with:
+          fail-on: high
+          summary: "false"
+          upload-sarif: ${{ github.event_name == 'push' }}
+
