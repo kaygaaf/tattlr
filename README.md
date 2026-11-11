@@ -52,6 +52,8 @@ tattlr scan --since 7d        # just the last week
 tattlr scan --agent claude    # one agent (claude, codex, gemini, openclaw, cursor)
 tattlr scan --project billing # projects whose path contains "billing"
 tattlr scan --json            # everything, machine readable
+tattlr scan --format sarif    # SARIF 2.1.0, for GitHub code scanning
+tattlr scan --format markdown # a summary you can paste into an issue or CI summary
 tattlr scan --card sheet.png  # a shareable card (sheet.svg works too)
 tattlr scan --fail-on high    # exit 1 if anything high or worse shows up
 tattlr rules                  # list every rule and its severity
@@ -69,7 +71,9 @@ On a machine with no agent logs yet, `tattlr` tells you what it does and what to
 
 ## What it looks like
 
-This is real output from the fixture logs in `testdata/home`, which has a couple of sessions per agent full of bad behavior:
+![tattlr scan listing risky tool calls from five agents, then exiting 1 with --fail-on high](docs/scan.svg)
+
+Both the recording above and the text below are real output from the fixture logs in `testdata/home`, which has a couple of sessions per agent full of bad behavior:
 
 ```
 $ tattlr scan --home testdata/home
@@ -363,6 +367,7 @@ python3 scripts/gen_fixtures.py   # regenerate testdata/home
 scripts/demo.sh                   # the prompt injection demo, in a temp HOME
 scripts/ui-shot.sh                # re-make docs/ui.png (needs Chrome and Node 20+)
 vhs scripts/demo.tape             # re-record docs/demo.gif (needs VHS)
+python3 scripts/scan-svg.py /tmp/tattlr > docs/scan.svg   # re-record the scan demo, no deps
 goreleaser release --snapshot --clean && sh scripts/test-install.sh   # release build plus install.sh check
 cd npm && npm test                # the npm launcher
 ```

