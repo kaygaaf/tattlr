@@ -194,6 +194,7 @@ Run `tattlr rules` for the full list. The short version:
 
 - **Secrets:** reading `.env` files, SSH keys, cloud credentials (AWS, gcloud, Azure, kube), `.npmrc`, `.netrc`, password stores and browser profiles. Pulling passwords out of the macOS keychain or `gh auth token`. Dumping environment variables.
 - **Destructive commands:** `rm -rf` (worse on home or root), `dd` or `mkfs` on a disk, `git reset --hard`, `git clean`, force pushes, `--no-verify`, `chmod -R 777`, dropping database tables.
+- **Infra teardown:** `terraform destroy` (and `tofu`, `pulumi`, `cdk`), `kubectl delete namespace` or `--all`, `helm uninstall`, `aws s3 rb --force`, `aws s3 rm --recursive`, terminating EC2 instances, deleting RDS or DynamoDB, `gcloud ... delete`, `az group delete`, `fly apps destroy`.
 - **Remote code:** `curl | sh` and friends, or downloading a script and running it.
 - **Network exfil:** sending secrets or env vars over the network, uploading files, talking to paste and webhook sites, secrets in URLs.
 - **Privilege:** `sudo`, asking to run outside the sandbox, starting another agent with approvals turned off.

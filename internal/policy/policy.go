@@ -114,6 +114,7 @@ rules:
   git-force-push: ask
   git-reset-hard: ask
   sql-drop: ask
+  infra-destroy: ask
   agent-config: ask
   shell-profile: ask
   rm-rf: allow

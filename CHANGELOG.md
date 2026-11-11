@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- New rule `infra-destroy` (high): `terraform destroy`, `pulumi destroy`, `kubectl delete namespace`, `aws s3 rb --force`, `gcloud ... delete`, `az group delete` and similar. Single `kubectl delete pod` and `helm uninstall` count as medium. The default policy asks first.
+
 ## v0.2.0 (2026-11-11)
 
 - `tattlr scan --format sarif` writes SARIF 2.1.0, so findings can go into GitHub code scanning or any tool that reads SARIF. Files an agent touched inside your checkout get a path relative to it; everything else points at the session log.

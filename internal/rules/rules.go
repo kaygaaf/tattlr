@@ -85,6 +85,7 @@ const (
 	RuleChmod777      = "chmod-777"
 	RuleDiskWipe      = "disk-wipe"
 	RuleSQLDrop       = "sql-drop"
+	RuleInfraDestroy  = "infra-destroy"
 	RuleRemoteCode    = "remote-code"
 	RuleRunDownloaded = "run-downloaded"
 	RuleUpload        = "upload"
@@ -123,6 +124,7 @@ var Catalog = map[string]Info{
 	RuleChmod777:      {RuleChmod777, "Made files world-writable", "destructive", High},
 	RuleDiskWipe:      {RuleDiskWipe, "Wrote straight to a disk device", "destructive", Critical},
 	RuleSQLDrop:       {RuleSQLDrop, "Dropped or truncated a database table", "destructive", High},
+	RuleInfraDestroy:  {RuleInfraDestroy, "Tore down cloud or cluster resources", "destructive", High},
 	RuleRemoteCode:    {RuleRemoteCode, "Piped a remote script into a shell", "remote-code", Critical},
 	RuleRunDownloaded: {RuleRunDownloaded, "Downloaded a script and ran it", "remote-code", High},
 	RuleUpload:        {RuleUpload, "Uploaded a local file", "network", High},
@@ -410,6 +412,8 @@ func (en *Engine) checkShell(cmd string, add func(string, string, Severity)) {
 			}
 		case "git":
 			en.checkGit(args, add)
+		case "terraform", "tofu", "terragrunt", "pulumi", "cdk", "cdktf", "sst", "kubectl", "oc", "helm", "aws", "gcloud", "az", "fly", "flyctl":
+			checkInfra(p, args, add)
 		case "chmod":
 			for _, a := range args[1:] {
 				if a == "777" || a == "0777" || a == "a+rwx" || a == "o+w" || a == "a+w" || a == "ugo+rwx" {
