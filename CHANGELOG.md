@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.2.0 (2026-11-11)
+
+- `tattlr scan --format sarif` writes SARIF 2.1.0, so findings can go into GitHub code scanning or any tool that reads SARIF. Files an agent touched inside your checkout get a path relative to it; everything else points at the session log.
+- `tattlr scan --format markdown` writes a short summary for CI job summaries, issues and PR comments.
+- `--json` still works and is the same as `--format json`.
+- `--home` accepts relative paths properly.
+- New: [tattlr-action](https://github.com/kaygaaf/tattlr-action) runs a scan in GitHub Actions after your agent step, with a job summary, `fail-on` and optional SARIF upload.
+
 ## v0.1.1 (2026-11-06)
 
 - `go install` and `tattlr version` print the version without a leading `v`.
