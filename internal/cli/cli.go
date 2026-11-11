@@ -136,7 +136,8 @@ func runScan(args []string, env Env) int {
 	since := fs.String("since", "", "only look at activity after this: 24h, 7d, 2w or 2026-10-01")
 	fs.Var(&agents, "agent", "only these agents (claude, codex, gemini, openclaw, cursor); repeat or comma separate")
 	project := fs.String("project", "", "only projects whose path contains this")
-	asJSON := fs.Bool("json", false, "print JSON instead of the rap sheet")
+	asJSON := fs.Bool("json", false, "same as --format json")
+	format := fs.String("format", "text", "output format: text, json, sarif or markdown")
 	card := fs.String("card", "", "also write a shareable card to this file (.svg or .png)")
 	noColor := fs.Bool("no-color", false, "turn off colors")
 	home := fs.String("home", env.Home, "home folder to look in")
@@ -152,6 +153,11 @@ func runScan(args []string, env Env) int {
 			return 0
 		}
 		return 2
+	}
+	if *home != "" {
+		if abs, err := filepath.Abs(*home); err == nil {
+			*home = abs
+		}
 	}
 	o := scan.Options{Home: *home, Project: *project, Now: env.Now}
 	if *since != "" {
@@ -170,6 +176,17 @@ func runScan(args []string, env Env) int {
 		}
 		o.Agents = append(o.Agents, n)
 	}
+	if *asJSON {
+		*format = "json"
+	}
+	switch *format = strings.ToLower(*format); *format {
+	case "text", "json", "sarif":
+	case "markdown", "md":
+		*format = "markdown"
+	default:
+		fmt.Fprintf(env.Stderr, "tattlr: unknown format %q (try text, json, sarif or markdown)\n", *format)
+		return 2
+	}
 	var threshold rules.Severity
 	if *failOn != "" {
 		if threshold = rules.ParseSeverity(*failOn); threshold == 0 {
@@ -186,12 +203,21 @@ func runScan(args []string, env Env) int {
 	for _, w := range res.Warnings {
 		fmt.Fprintln(env.Stderr, "tattlr: warning:", w)
 	}
-	if *asJSON {
+	switch *format {
+	case "json":
 		if err := report.JSON(env.Stdout, res); err != nil {
 			fmt.Fprintln(env.Stderr, "tattlr:", err)
 			return 1
 		}
-	} else {
+	case "sarif":
+		root, _ := os.Getwd()
+		if err := report.SARIF(env.Stdout, res, report.SARIFOptions{Version: Version, SrcRoot: root}); err != nil {
+			fmt.Fprintln(env.Stderr, "tattlr:", err)
+			return 1
+		}
+	case "markdown":
+		report.Markdown(env.Stdout, res, report.MarkdownOptions{Top: *top, Moments: *moments})
+	default:
 		color := env.TTY && !*noColor && env.Getenv("NO_COLOR") == "" && env.Getenv("TERM") != "dumb"
 		if f := env.Getenv("FORCE_COLOR"); f != "" && f != "0" && !*noColor {
 			color = true
@@ -203,7 +229,7 @@ func runScan(args []string, env Env) int {
 			fmt.Fprintln(env.Stderr, "tattlr:", err)
 			return 1
 		}
-		if !*asJSON {
+		if *format == "text" {
 			fmt.Fprintf(env.Stdout, " Card saved to %s\n\n", *card)
 		}
 	}

@@ -172,3 +172,28 @@ func jsonString(s string) string {
 	b, _ := json.Marshal(s)
 	return string(b)
 }
+
+func TestScanFormats(t *testing.T) {
+	code, out, errs := run(t, fixtures(), "", false, "scan", "--format", "sarif", "--fail-on", "critical")
+	if code != 1 {
+		t.Fatalf("want exit 1 from --fail-on, got %d: %s", code, errs)
+	}
+	var log struct {
+		Version string `json:"version"`
+		Runs    []struct {
+			Results []json.RawMessage `json:"results"`
+		} `json:"runs"`
+	}
+	if err := json.Unmarshal([]byte(out), &log); err != nil || log.Version != "2.1.0" || len(log.Runs[0].Results) == 0 {
+		t.Fatalf("bad SARIF: %v %+v", err, log)
+	}
+
+	code, out, _ = run(t, fixtures(), "", false, "scan", "--format", "md", "--card", filepath.Join(t.TempDir(), "c.svg"))
+	if code != 0 || !strings.HasPrefix(out, "## tattlr rap sheet") || strings.Contains(out, "Card saved") {
+		t.Fatalf("markdown: %d\n%s", code, out)
+	}
+
+	if code, _, errs := run(t, fixtures(), "", false, "scan", "--format", "xml"); code != 2 || !strings.Contains(errs, "unknown format") {
+		t.Fatalf("want a usage error, got %d %s", code, errs)
+	}
+}

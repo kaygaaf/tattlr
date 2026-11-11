@@ -1,5 +1,5 @@
-// Package report renders scan results as a terminal rap sheet, JSON, or an
-// SVG/PNG card.
+// Package report renders scan results as a terminal rap sheet, JSON, SARIF,
+// Markdown or an SVG/PNG card.
 package report
 
 import (
