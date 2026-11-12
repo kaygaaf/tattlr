@@ -107,6 +107,7 @@ rules:
   exfil: deny
   disk-wipe: deny
   drop-site: deny
+  imds: deny
   secret-in-url: deny
   upload: ask
   secret-read: ask

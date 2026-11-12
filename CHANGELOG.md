@@ -3,6 +3,7 @@
 ## Unreleased
 
 - New rule `infra-destroy` (high): `terraform destroy`, `pulumi destroy`, `kubectl delete namespace`, `aws s3 rb --force`, `gcloud ... delete`, `az group delete` and similar. Single `kubectl delete pod` and `helm uninstall` count as medium. The default policy asks first.
+- New rule `imds` (critical): flags requests to cloud instance metadata services such as `169.254.169.254`, `metadata.google.internal`, ECS/EKS metadata IPs and Alibaba's `100.100.100.200`. The default policy denies them. AWS time sync at `169.254.169.123` is left alone.
 
 ## v0.2.0 (2026-11-11)
 

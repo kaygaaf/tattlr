@@ -91,6 +91,7 @@ const (
 	RuleUpload        = "upload"
 	RuleExfil         = "exfil"
 	RuleDropSite      = "drop-site"
+	RuleIMDS          = "imds"
 	RuleSecretInURL   = "secret-in-url"
 	RuleSudo          = "sudo"
 	RuleShellProfile  = "shell-profile"
@@ -130,6 +131,7 @@ var Catalog = map[string]Info{
 	RuleUpload:        {RuleUpload, "Uploaded a local file", "network", High},
 	RuleExfil:         {RuleExfil, "Sent secrets over the network", "network", Critical},
 	RuleDropSite:      {RuleDropSite, "Talked to a paste or webhook drop site", "network", High},
+	RuleIMDS:          {RuleIMDS, "Talked to a cloud metadata service", "network", Critical},
 	RuleSecretInURL:   {RuleSecretInURL, "Put a secret in a URL", "network", High},
 	RuleSudo:          {RuleSudo, "Used sudo", "privilege", Medium},
 	RuleShellProfile:  {RuleShellProfile, "Edited a shell startup file", "tampering", High},
@@ -335,6 +337,9 @@ func (en *Engine) checkURL(u string, add func(string, string, Severity)) {
 	if h := dropHost(u); h != "" {
 		add(RuleDropSite, h, 0)
 	}
+	if h := imdsHost(u); h != "" {
+		add(RuleIMDS, h, 0)
+	}
 	if pu, err := url.Parse(u); err == nil {
 		if pu.User != nil {
 			if _, ok := pu.User.Password(); ok {
@@ -371,6 +376,9 @@ func (en *Engine) checkShell(cmd string, add func(string, string, Severity)) {
 	}
 	if h := dropHost(cmd); h != "" && hasNetworkProgram(segs) {
 		add(RuleDropSite, h, 0)
+	}
+	if h := imdsHost(cmd); h != "" && hasNetworkProgram(segs) {
+		add(RuleIMDS, h, 0)
 	}
 	for _, u := range urlRe.FindAllString(cmd, -1) {
 		if pu, err := url.Parse(u); err == nil && pu.RawQuery != "" && redact.String(pu.RawQuery) != pu.RawQuery {
