@@ -116,6 +116,7 @@ rules:
   git-reset-hard: ask
   sql-drop: ask
   infra-destroy: ask
+  container-escape: ask
   agent-config: ask
   shell-profile: ask
   rm-rf: allow

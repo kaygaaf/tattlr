@@ -98,6 +98,7 @@ const (
 	RuleAgentConfig   = "agent-config"
 	RulePersistence   = "persistence"
 	RuleSandboxEscape = "sandbox-escape"
+	RuleContainer     = "container-escape"
 	RuleYoloSpawn     = "yolo-spawn"
 )
 
@@ -138,6 +139,7 @@ var Catalog = map[string]Info{
 	RuleAgentConfig:   {RuleAgentConfig, "Edited its own config or hooks", "tampering", High},
 	RulePersistence:   {RulePersistence, "Set up something that runs later", "tampering", Medium},
 	RuleSandboxEscape: {RuleSandboxEscape, "Asked to run outside the sandbox", "privilege", Medium},
+	RuleContainer:     {RuleContainer, "Gave a container the host", "privilege", High},
 	RuleYoloSpawn:     {RuleYoloSpawn, "Started another agent with approvals off", "privilege", Medium},
 }
 
@@ -422,6 +424,8 @@ func (en *Engine) checkShell(cmd string, add func(string, string, Severity)) {
 			en.checkGit(args, add)
 		case "terraform", "tofu", "terragrunt", "pulumi", "cdk", "cdktf", "sst", "kubectl", "oc", "helm", "aws", "gcloud", "az", "fly", "flyctl":
 			checkInfra(p, args, add)
+		case "docker", "podman", "nerdctl", "nsenter":
+			checkContainer(p, args, add)
 		case "chmod":
 			for _, a := range args[1:] {
 				if a == "777" || a == "0777" || a == "a+rwx" || a == "o+w" || a == "a+w" || a == "ugo+rwx" {
