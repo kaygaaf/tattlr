@@ -1,6 +1,6 @@
 {
   "name": "tattlr",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Tells on your AI coding agents. Reads their logs, blocks the sketchy stuff live.",
   "license": "MIT",
   "author": "Kayorama",
@@ -20,11 +20,11 @@
     "node": ">=18"
   },
   "optionalDependencies": {
-    "tattlr-darwin-arm64": "0.2.0",
-    "tattlr-darwin-x64": "0.2.0",
-    "tattlr-linux-arm64": "0.2.0",
-    "tattlr-linux-x64": "0.2.0",
-    "tattlr-win32-x64": "0.2.0"
+    "tattlr-darwin-arm64": "0.3.0",
+    "tattlr-darwin-x64": "0.3.0",
+    "tattlr-linux-arm64": "0.3.0",
+    "tattlr-linux-x64": "0.3.0",
+    "tattlr-win32-x64": "0.3.0"
   },
   "scripts": {
     "test": "node --test test/*.test.js"
