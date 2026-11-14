@@ -197,7 +197,7 @@ Run `tattlr rules` for the full list. The short version:
 - **Infra teardown:** `terraform destroy` (and `tofu`, `pulumi`, `cdk`), `kubectl delete namespace` or `--all`, `helm uninstall`, `aws s3 rb --force`, `aws s3 rm --recursive`, terminating EC2 instances, deleting RDS or DynamoDB, `gcloud ... delete`, `az group delete`, `fly apps destroy`.
 - **Remote code:** `curl | sh` and friends, or downloading a script and running it.
 - **Network exfil:** sending secrets or env vars over the network, uploading files, talking to paste and webhook sites, secrets in URLs, and requests to cloud instance metadata services (`169.254.169.254`, `metadata.google.internal` and the like).
-- **Privilege:** `sudo`, asking to run outside the sandbox, starting another agent with approvals turned off.
+- **Privilege:** `sudo`, asking to run outside the sandbox, starting another agent with approvals turned off, and container runs that get the host: `--privileged`, the Docker socket mounted in, `-v /:/host`, `--pid=host`, `--cap-add SYS_ADMIN`, `nsenter -t 1`.
 - **Tampering:** edits to shell startup files (`.zshrc`, `.bashrc` and so on), to the agent's own settings, hooks or MCP config, and things that run later like cron jobs, launch agents and git hooks.
 - **Canaries:** anything that touches a fake credential planted by `tattlr trap`. Always critical.
 
