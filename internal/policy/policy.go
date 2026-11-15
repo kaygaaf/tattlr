@@ -117,6 +117,7 @@ rules:
   sql-drop: ask
   infra-destroy: ask
   container-escape: ask
+  publish: ask
   agent-config: ask
   shell-profile: ask
   rm-rf: allow
