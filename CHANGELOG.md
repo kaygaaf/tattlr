@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- New rule `publish` (high): `npm`/`pnpm`/`yarn`/`bun publish` and `npm unpublish`, `cargo publish`, `twine upload`, `uv`/`poetry`/`hatch publish`, `gem push`, `dotnet nuget push`, `mvn deploy`, `gh release create` and `goreleaser release`. `docker push` is medium. `--dry-run` and `goreleaser --snapshot` are left alone, and so is `npm run publish`. The default policy asks first.
+
 ## v0.3.0 (2026-11-14)
 
 - New rule `infra-destroy` (high): `terraform destroy`, `pulumi destroy`, `kubectl delete namespace`, `aws s3 rb --force`, `gcloud ... delete`, `az group delete` and similar. Single `kubectl delete pod` and `helm uninstall` count as medium. The default policy asks first.
