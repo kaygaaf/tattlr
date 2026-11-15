@@ -30,10 +30,8 @@ func checkPublish(p string, args []string, add func(string, string, Severity)) {
 			add(RulePublish, "yarn publish", 0)
 		}
 	case "cargo":
-		if sub == "publish" {
-			add(RulePublish, "cargo publish", 0)
-		} else if sub == "yank" {
-			add(RulePublish, "cargo yank", 0)
+		if sub == "publish" || sub == "yank" {
+			add(RulePublish, "cargo "+sub, 0)
 		}
 	case "twine":
 		if sub == "upload" {
