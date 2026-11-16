@@ -108,6 +108,7 @@ rules:
   disk-wipe: deny
   drop-site: deny
   imds: deny
+  reverse-shell: deny
   secret-in-url: deny
   upload: ask
   secret-read: ask
@@ -118,6 +119,8 @@ rules:
   infra-destroy: ask
   container-escape: ask
   publish: ask
+  ssh-backdoor: ask
+  cover-tracks: ask
   agent-config: ask
   shell-profile: ask
   rm-rf: allow

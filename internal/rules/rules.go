@@ -101,6 +101,9 @@ const (
 	RuleSandboxEscape = "sandbox-escape"
 	RuleContainer     = "container-escape"
 	RuleYoloSpawn     = "yolo-spawn"
+	RuleReverseShell  = "reverse-shell"
+	RuleSSHBackdoor   = "ssh-backdoor"
+	RuleCoverTracks   = "cover-tracks"
 )
 
 // Info describes one rule for humans.
@@ -143,6 +146,9 @@ var Catalog = map[string]Info{
 	RuleSandboxEscape: {RuleSandboxEscape, "Asked to run outside the sandbox", "privilege", Medium},
 	RuleContainer:     {RuleContainer, "Gave a container the host", "privilege", High},
 	RuleYoloSpawn:     {RuleYoloSpawn, "Started another agent with approvals off", "privilege", Medium},
+	RuleReverseShell:  {RuleReverseShell, "Opened a reverse shell", "network", Critical},
+	RuleSSHBackdoor:   {RuleSSHBackdoor, "Added an SSH key to authorized_keys", "tampering", High},
+	RuleCoverTracks:   {RuleCoverTracks, "Wiped history or switched off a defense", "tampering", High},
 }
 
 // Finding is one rule hit on one event.
@@ -257,6 +263,9 @@ func (en *Engine) checkWriteTarget(p string, add func(string, string, Severity))
 	}
 	if t := persistenceTarget(p, en.Home); t != "" {
 		add(RulePersistence, t, 0)
+	}
+	if isAuthorizedKeys(p) {
+		add(RuleSSHBackdoor, normPath(p, en.Home), 0)
 	}
 	if k := secretKind(p, en.Home); k != "" {
 		add(RuleSecretWrite, k, 0)
@@ -378,6 +387,8 @@ func (en *Engine) checkShell(cmd string, add func(string, string, Severity)) {
 	if sqlDropRe.MatchString(cmd) {
 		add(RuleSQLDrop, "", 0)
 	}
+	checkReverseShell(cmd, segs, add)
+	checkCoverTracks(cmd, segs, add)
 	if h := dropHost(cmd); h != "" && hasNetworkProgram(segs) {
 		add(RuleDropSite, h, 0)
 	}
