@@ -3,6 +3,9 @@
 ## Unreleased
 
 - New rule `publish` (high): `npm`/`pnpm`/`yarn`/`bun publish` and `npm unpublish`, `cargo publish`, `twine upload`, `uv`/`poetry`/`hatch publish`, `gem push`, `dotnet nuget push`, `mvn deploy`, `gh release create` and `goreleaser release`. `docker push` is medium. `--dry-run` and `goreleaser --snapshot` are left alone, and so is `npm run publish`. The default policy asks first.
+- New rule `reverse-shell` (critical): `bash -i >& /dev/tcp/...`, `nc -e`, `ncat --exec`, `socat exec:... tcp:...`, the `mkfifo` plus `nc` trick, and the usual Python, Perl, PHP, Ruby, Node and PowerShell one liners that wire a socket to a shell. Denied by default. Port checks like `nc -z host 443` or `</dev/tcp/host/443` are fine.
+- New rule `ssh-backdoor` (high): writing or appending to `~/.ssh/authorized_keys` (or `authorized_keys2`), from a shell redirect, `tee -a`, `cp` or a Write/Edit tool call. Reading the file is still fine. The default policy asks first.
+- New rule `cover-tracks` (high): `history -c`, `unset HISTFILE`, `HISTFILE=/dev/null`, wiping `.bash_history` or `.zsh_history`, `iptables -F`, `ufw disable`, `csrutil disable`, `spctl --master-disable`, `setenforce 0`, stopping `auditd`, and turning off Defender real-time protection. The default policy asks first.
 
 ## v0.3.0 (2026-11-14)
 
