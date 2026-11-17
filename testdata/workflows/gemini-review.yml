@@ -1,0 +1,19 @@
+# pull_request_target with a gate on who opened the PR, but the PR title
+# still lands in the prompt and the job can write packages.
+name: gemini review
+on:
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  review:
+    if: github.event.pull_request.author_association == 'MEMBER'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      pull-requests: write
+    steps:
+      - uses: google-github-actions/run-gemini-cli@v0
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          prompt: "Review the PR titled ${{ github.event.pull_request.title }}"

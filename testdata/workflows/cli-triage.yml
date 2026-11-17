@@ -1,0 +1,22 @@
+# Claude Code run by hand on every new comment, with the comment passed in
+# through env, a write token and the permission prompts turned off.
+name: triage
+on: [issue_comment]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Ask Claude
+        env:
+          COMMENT: ${{ github.event.comment.body }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm i -g @anthropic-ai/claude-code
+          claude --dangerously-skip-permissions -p "Triage this comment: $COMMENT"

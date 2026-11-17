@@ -83,6 +83,11 @@ type sarifLocation struct {
 
 type sarifPhysical struct {
 	ArtifactLocation sarifArtifactLoc `json:"artifactLocation"`
+	Region           *sarifRegion     `json:"region,omitempty"`
+}
+
+type sarifRegion struct {
+	StartLine int `json:"startLine"`
 }
 
 type sarifArtifactLoc struct {
@@ -179,7 +184,7 @@ func SARIF(w io.Writer, r *scan.Result, o SARIFOptions) error {
 		run.Results = append(run.Results, sarifResult{
 			RuleID: f.Rule, RuleIndex: index[f.Rule], Level: sarifLevel(f.Severity),
 			Message:             sarifText{msg},
-			Locations:           []sarifLocation{{sarifPhysical{location(e.Path, e.Source, root)}}},
+			Locations:           []sarifLocation{{sarifPhysical{ArtifactLocation: location(e.Path, e.Source, root)}}},
 			PartialFingerprints: map[string]string{"tattlrFinding/v1": hex.EncodeToString(sum[:16])},
 			Properties:          props,
 		})

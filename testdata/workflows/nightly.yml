@@ -1,0 +1,16 @@
+# Agent on a schedule and on push: nobody outside can steer it.
+name: nightly docs
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  push:
+    branches: [main]
+
+permissions: write-all
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: codex exec --full-auto "update docs for ${{ github.event.head_commit.message }}"

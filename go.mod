@@ -4,6 +4,7 @@ go 1.22
 
 require (
 	github.com/klauspost/compress v1.17.11
+	go.yaml.in/yaml/v3 v3.0.6
 	golang.org/x/image v0.24.0
 	modernc.org/sqlite v1.34.5
 )

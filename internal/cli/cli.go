@@ -74,6 +74,7 @@ Usage:
   tattlr protect uninstall take the hooks back out
   tattlr ui                a local web page: live timeline, rap sheet, approval inbox
   tattlr hook <agent>      what the agent hooks call (reads one tool call as JSON on stdin)
+  tattlr workflows [path]  flag GitHub workflows where outsiders can steer an agent
   tattlr rules             list what tattlr looks for
   tattlr version
 
@@ -96,6 +97,8 @@ func Run(args []string, env Env) int {
 		return runTrap(args[1:], env)
 	case "rules":
 		return runRules(env)
+	case "workflows", "workflow":
+		return runWorkflows(args[1:], env)
 	case "protect":
 		return runProtect(args[1:], env)
 	case "hook":
