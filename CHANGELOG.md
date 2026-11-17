@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- New command `tattlr workflows [path]`: reads `.github/workflows` and flags agent steps (Claude Code, Codex and Gemini CLI actions, or `claude -p`, `codex exec`, `gemini -p` in a script) that run on issues, comments, `pull_request_target`, reviews or discussions and that outsiders can steer: their text in the prompt, `allow-users: "*"`, write permissions or extra secrets, and sandboxes turned off. A copy of the old Codex issue labeler comes out critical. Supports `--fail-on` and `--format text|json|sarif|markdown`, with line numbers in SARIF.
 - New rule `publish` (high): `npm`/`pnpm`/`yarn`/`bun publish` and `npm unpublish`, `cargo publish`, `twine upload`, `uv`/`poetry`/`hatch publish`, `gem push`, `dotnet nuget push`, `mvn deploy`, `gh release create` and `goreleaser release`. `docker push` is medium. `--dry-run` and `goreleaser --snapshot` are left alone, and so is `npm run publish`. The default policy asks first.
 - New rule `reverse-shell` (critical): `bash -i >& /dev/tcp/...`, `nc -e`, `ncat --exec`, `socat exec:... tcp:...`, the `mkfifo` plus `nc` trick, and the usual Python, Perl, PHP, Ruby, Node and PowerShell one liners that wire a socket to a shell. Denied by default. Port checks like `nc -z host 443` or `</dev/tcp/host/443` are fine.
 - New rule `ssh-backdoor` (high): writing or appending to `~/.ssh/authorized_keys` (or `authorized_keys2`), from a shell redirect, `tee -a`, `cp` or a Write/Edit tool call. Reading the file is still fine. The default policy asks first.

@@ -58,6 +58,7 @@ tattlr scan --format sarif    # SARIF 2.1.0, for GitHub code scanning
 tattlr scan --format markdown # a summary you can paste into an issue or CI summary
 tattlr scan --card sheet.png  # a shareable card (sheet.svg works too)
 tattlr scan --fail-on high    # exit 1 if anything high or worse shows up
+tattlr workflows              # check .github/workflows for agents outsiders can steer
 tattlr rules                  # list every rule and its severity
 tattlr trap                   # plant fake credentials as bait
 tattlr protect install        # block things live (see below)
@@ -93,6 +94,30 @@ steps:
 ```
 
 It downloads the release binary, checks it against `checksums.txt`, and works on Linux, macOS and Windows runners. Inputs, outputs and more examples are in the [action's README](https://github.com/kaygaaf/tattlr-action#inputs). Not on GitHub? `tattlr scan --fail-on high --format sarif > tattlr.sarif` does the same job in any CI.
+
+## Check your GitHub workflows
+
+The rap sheet tells you what an agent did. `tattlr workflows` looks at the setup before anything runs: it reads `.github/workflows` and flags agent steps that people outside the repo can steer. That is how the [Codex issue labeler](https://depi.security/blog/20261111-backdooring-codex/) went wrong: any issue started it, `allow-users` was `"*"`, and the issue title and body went straight into the prompt.
+
+```sh
+tattlr workflows                      # the repo in the current folder
+tattlr workflows path/to/repo         # or a repo, a workflows folder or one file
+tattlr workflows --fail-on high       # exit 1 on high or critical, for CI
+tattlr workflows --format sarif       # line-level alerts in code scanning
+tattlr workflows --format markdown    # also json
+```
+
+It knows `anthropics/claude-code-action`, `openai/codex-action`, `google-github-actions/run-gemini-cli`, and `claude -p`, `codex exec`, `gemini -p` or `cursor-agent -p` in a `run:` step. Only workflows on events outsiders can create count: `issues`, `issue_comment`, `pull_request_target`, PR reviews and discussions. Push, schedule and manual runs are left alone.
+
+| Check | Severity | What it means |
+|---|---|---|
+| `workflow-untrusted-prompt` | high, critical if anyone can start it | An issue or comment body, PR title, branch name and so on ends up in the prompt, directly or through an env var |
+| `workflow-agent-open` | high | `allow-users: "*"` (or `allowed_non_write_users`, `allowed_bots`), or a CLI step with no `if:` that checks who is asking |
+| `workflow-agent-write` | high, critical with both of the above | The job has `contents`, `packages`, `id-token`, `actions`, `pages` or `deployments` write, or secrets beyond the model key |
+| `workflow-agent-sandbox-off` | high | `--dangerously-skip-permissions`, `--yolo`, `--full-auto`, `danger-full-access` or a writable Codex sandbox |
+| `workflow-agent-trigger` | low | An agent on one of those events with nothing else wrong. The actions only answer people with write access by default, so keep it that way |
+
+The last three only show up when outsiders can actually reach the agent, so a stock `@claude` workflow gets one low note and nothing else.
 
 ## What it looks like
 
