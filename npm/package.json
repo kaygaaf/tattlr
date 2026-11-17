@@ -3,15 +3,18 @@
   "version": "0.3.0",
   "description": "Tells on your AI coding agents. Reads their logs, blocks the sketchy stuff live.",
   "license": "MIT",
-  "author": "Kayorama",
-  "homepage": "https://github.com/kaygaaf/tattlr",
+  "author": {
+    "name": "Kay van Dijk",
+    "url": "https://kayorama.nl"
+  },
+  "homepage": "https://kayorama.nl/tattlr",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kaygaaf/tattlr.git",
     "directory": "npm"
   },
   "bugs": "https://github.com/kaygaaf/tattlr/issues",
-  "keywords": ["claude-code", "codex", "gemini-cli", "ai-agents", "security", "audit", "cli"],
+  "keywords": ["claude-code", "codex", "gemini-cli", "cursor", "openclaw", "ai", "agent", "ai-agents", "security", "mcp", "audit", "cli"],
   "bin": {
     "tattlr": "bin/tattlr.js"
   },

@@ -4,6 +4,8 @@
 
 tattlr reads the logs your AI coding agents already leave on disk, tells you what they actually did, and can block the bad calls before they run. Nothing leaves your machine.
 
+Made by Kay van Dijk (https://kayorama.nl/tattlr).
+
 ![tattlr stopping a prompt injection from sending a .env file out](docs/demo.gif)
 
 ## Quickstart
