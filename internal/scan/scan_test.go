@@ -28,8 +28,8 @@ func TestRunFixtures(t *testing.T) {
 	// The fork and the orphaned copy repeat 3 earlier Claude calls; each
 	// tool_use id counts once.
 	for _, a := range res.Agents {
-		if a.Agent == "claude-code" && (a.Sessions != 4 || a.ToolCalls != 21) {
-			t.Errorf("claude sessions/calls = %d/%d, want 4/21", a.Sessions, a.ToolCalls)
+		if a.Agent == "claude-code" && (a.Sessions != 4 || a.ToolCalls != 22) {
+			t.Errorf("claude sessions/calls = %d/%d, want 4/22", a.Sessions, a.ToolCalls)
 		}
 	}
 	if res.Canaries != 2 {
@@ -40,7 +40,8 @@ func TestRunFixtures(t *testing.T) {
 		byRule[o.Rule] = o.Count
 	}
 	for _, r := range []string{"canary", "remote-code", "rm-rf", "git-force-push", "secret-read", "exfil",
-		"disk-wipe", "shell-profile", "agent-config", "persistence", "keychain", "drop-site", "sudo"} {
+		"disk-wipe", "shell-profile", "agent-config", "persistence", "keychain", "drop-site", "sudo",
+		"reverse-shell", "ssh-backdoor", "cover-tracks", "secret-then-egress"} {
 		if byRule[r] == 0 {
 			t.Errorf("expected rule %s to fire; got %v", r, byRule)
 		}

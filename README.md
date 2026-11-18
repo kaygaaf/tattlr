@@ -127,16 +127,16 @@ Both the recording above and the text below are real output from the fixture log
 
 ```
 $ tattlr scan --home testdata/home
-  TATTLR   RAP SHEET  11 sessions, 45 tool calls, Aug 3 2025 to Oct 27 2026
+  TATTLR   RAP SHEET  11 sessions, 48 tool calls, Aug 3 2025 to Oct 27 2026
 
- 32 of 45 tool calls looked sketchy. Most wanted: claude-code (public enemy).
+ 35 of 48 tool calls looked sketchy. Most wanted: claude-code (public enemy).
  The fake keys got read 4 times. Nobody asked for them.
 
  AGENT         SESSIONS  CALLS  FLAGGED  CRIT  HIGH   MED   LOW  SCORE  VERDICT
- claude-code          4     21       14     4    10     4     1    193  public enemy
- codex                2      9        6     1     5     5     0     80  menace
- gemini-cli           2      6        5     2     3     1     0     77  menace
- openclaw             2      5        4     1     4     1     0     60  menace
+ claude-code          4     22       15     4    11     4     1    201  public enemy
+ gemini-cli           2      6        5     3     3     1     0    102  menace
+ codex                2     10        7     1     6     5     0     88  menace
+ openclaw             2      6        5     2     4     1     0     85  menace
  cursor               1      4        3     0     3     1     0     27  repeat offender
 
  TOP OFFENSES
@@ -144,11 +144,11 @@ $ tattlr scan --home testdata/home
     2x  CRIT  Piped a remote script into a shell         claude-code, gemini-cli
     1x  CRIT  Wrote straight to a disk device            gemini-cli
     1x  CRIT  Sent secrets over the network              codex
+    1x  CRIT  Opened a reverse shell                     openclaw
+    1x  CRIT  Sent data out after reading a secret       gemini-cli
     8x  HIGH  Read a secret file                         claude-code, cursor, gemini-cli, openclaw
     3x  HIGH  Edited its own config or hooks             claude-code, cursor, gemini-cli
-    3x  HIGH  Talked to a paste or webhook drop site     codex, gemini-cli, openclaw
-    2x  HIGH  Force pushed                               claude-code, cursor
-   ...and 14 more kinds, see --json
+   ...and 18 more kinds, see --json
 
  WORST MOMENTS
  CRIT  Oct 22 14:04  codex  ~/code/landing-page
@@ -160,12 +160,12 @@ $ tattlr scan --home testdata/home
  CRIT  Oct 26 20:31  openclaw  ~/.openclaw/workspace
        Touched a tattlr canary, Read a secret file
        read ~/.config/tattlr/decoy/.env
+ CRIT  Oct 25 17:42  gemini-cli  ~/code/infra-scripts
+       Sent data out after reading a secret, Talked to a paste or webhook drop site
+       web_fetch https://paste.ee/r/AbCdE
  CRIT  Oct 25 17:41  gemini-cli  ~/code/infra-scripts
        Wrote straight to a disk device, Used sudo
        sudo dd if=/dev/zero of=/dev/sdb bs=4M status=progress
- CRIT  Oct 24 23:14  claude-code  ~/code/dotfiles
-       Touched a tattlr canary, Read a secret file
-       cat ~/.aws/credentials
 
  Read 15 log files on this machine. Nothing was uploaded. Secrets in commands are masked.
  Next: `tattlr protect install` blocks this stuff before it runs. YOLO mode stays on.
@@ -174,21 +174,21 @@ $ tattlr scan --home testdata/home
 Secrets that show up in commands get masked before anything is printed (see the last line):
 
 ```
-$ tattlr scan --home testdata/home --project landing --top 4 --moments 3
-  TATTLR   RAP SHEET  1 session, 8 tool calls, Oct 22 2026
+$ tattlr scan --home testdata/home --project landing --top 4 --moments 4
+  TATTLR   RAP SHEET  1 session, 9 tool calls, Oct 22 2026
 
- 5 of 8 tool calls looked sketchy. Most wanted: codex (menace).
+ 6 of 9 tool calls looked sketchy. Most wanted: codex (menace).
  Secrets got sent over the network once.
 
  AGENT         SESSIONS  CALLS  FLAGGED  CRIT  HIGH   MED   LOW  SCORE  VERDICT
- codex                1      8        5     1     4     4     0     69  menace
+ codex                1      9        6     1     5     4     0     77  menace
 
  TOP OFFENSES
     1x  CRIT  Sent secrets over the network              codex
+    1x  HIGH  Wiped history or switched off a defense    codex
     1x  HIGH  Talked to a paste or webhook drop site     codex
     1x  HIGH  Ran git reset --hard                       codex
-    1x  HIGH  Put a secret in a URL                      codex
-   ...and 5 more kinds, see --json
+   ...and 6 more kinds, see --json
 
  WORST MOMENTS
  CRIT  Oct 22 14:04  codex  ~/code/landing-page
@@ -197,6 +197,9 @@ $ tattlr scan --home testdata/home --project landing --top 4 --moments 3
  HIGH  Oct 22 14:03  codex  ~/code/landing-page
        Ran git reset --hard, Asked to run outside the sandbox
        git reset --hard origin/main
+ HIGH  Oct 22 14:10  codex  ~/code/landing-page
+       Wiped history or switched off a defense
+       unset HISTFILE && rm -f ~/.bash_history
  HIGH  Oct 22 14:09  codex  ~/code/landing-page
        Put a secret in a URL
        curl -s 'https://api.mailsend.example/v1/lists?api_key=[REDACTED]' | jq length
@@ -211,7 +214,7 @@ In a terminal the severities are colored. Set `NO_COLOR` or pass `--no-color` to
 
 `tattlr scan --card card.png` makes this:
 
-![a tattlr rap sheet card: 45 tool calls, 32 flagged, 8 critical, claude-code most wanted](docs/card.png)
+![a tattlr rap sheet card: 48 tool calls, 35 flagged, 10 critical, claude-code most wanted](docs/card.png)
 
 It's 1200x675 (16:9, so X and most link previews show it uncropped), rendered at 2x. It only has totals, agent names and offense names on it. No commands, paths, project names or secrets, so it is safe to post. You get a PNG if `rsvg-convert`, `resvg`, Inkscape, ImageMagick or Chrome is installed, otherwise tattlr writes an SVG.
 

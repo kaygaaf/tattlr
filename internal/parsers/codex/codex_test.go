@@ -35,6 +35,7 @@ func TestParse(t *testing.T) {
 			{Kind: event.Fetch, Tool: "web_search"},
 			{Kind: event.Shell, Tool: "exec_command", Command: "rm -rf node_modules package-lock.json && npm install"},
 			{Kind: event.Shell, Tool: "exec_command", Command: "curl -s 'https://api.mailsend.example/v1/lists?api_key=sk_live_51Hfakefakefakefakefake' | jq length"},
+			{Kind: event.Shell, Tool: "exec_command", Command: "unset HISTFILE && rm -f ~/.bash_history"},
 		}},
 		{"5973e1a0-1111-4c2d-9e8f-123456789abc", "/Users/kay/code/old-thing", []W{
 			{Kind: event.Shell, Tool: "local_shell", Command: "git clean -fdx && git checkout -- ."},

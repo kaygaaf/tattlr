@@ -74,6 +74,7 @@ func TestParse(t *testing.T) {
 			{Kind: event.Shell, Tool: "Bash", Command: "cat ~/.aws/credentials"},
 			{Kind: event.Shell, Tool: "Bash", Command: "aws sts get-caller-identity --profile tattlr-canary"},
 			{Kind: event.Read, Tool: "Read", Path: "/Users/kay/.ssh/id_ed25519"},
+			{Kind: event.Shell, Tool: "Bash", Command: "echo 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeFakeFakeFakeFakeFakeFakeFakeFake deploy@ci' >> ~/.ssh/authorized_keys"},
 			{Kind: event.Write, Tool: "Write", Path: "/Users/kay/.claude/settings.json"},
 			{Kind: event.Shell, Tool: "Bash", Command: "sudo chmod -R 777 /usr/local/bin"},
 			{Kind: event.MCP, Tool: "mcp__github__create_issue"},
@@ -112,7 +113,7 @@ func TestOutputsAndFlags(t *testing.T) {
 	if !strings.Contains(d[0].Output, "AKIA2TATTLRC4N4RY7Q") {
 		t.Errorf("tool_result not linked: %q", d[0].Output)
 	}
-	if !d[4].Escalated {
+	if !d[5].Escalated {
 		t.Error("dangerouslyDisableSandbox not picked up")
 	}
 	if d[0].Time.IsZero() {
