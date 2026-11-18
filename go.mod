@@ -1,9 +1,9 @@
 module github.com/kaygaaf/tattlr
 
-go 1.22
+go 1.24
 
 require (
-	github.com/klauspost/compress v1.17.11
+	github.com/klauspost/compress v1.18.7
 	go.yaml.in/yaml/v3 v3.0.6
 	golang.org/x/image v0.24.0
 	modernc.org/sqlite v1.34.5
