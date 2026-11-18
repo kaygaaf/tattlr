@@ -101,7 +101,7 @@ func RunResult(agent string, in io.Reader, out, errw io.Writer, o Options) Resul
 		return Result{Mode: pol.Mode}
 	}
 
-	d, ev := judge(c, pol, o)
+	d, ev, copies := judge(c, pol, o)
 	evidence := rules.Evidence(ev)
 	if len(c.events) > 1 {
 		evidence = redact.Line(fmt.Sprintf("%s (%d files)", evidence, len(c.events)), 300)
@@ -123,7 +123,8 @@ func RunResult(agent string, in io.Reader, out, errw io.Writer, o Options) Resul
 			Time: o.Now().UTC(), Agent: c.agent, HookEvent: c.hookEvent, Session: c.session, Cwd: c.cwd,
 			Tool: c.tool, Kind: string(ev.Kind), Evidence: evidence, Decision: d.Action.String(),
 			Mode: string(pol.Mode), Rules: d.Rules, Reason: d.Reason, Tainted: d.Taints,
-			Approval: map[string]string{approval.Approve: "approved", approval.Deny: "denied", approval.Timeout: "timed out"}[answer],
+			SecretCopies: copies,
+			Approval:     map[string]string{approval.Approve: "approved", approval.Deny: "denied", approval.Timeout: "timed out"}[answer],
 		}
 		if d.Action == policy.Ask && !ad.canAsk(c) {
 			// The agent got a deny; log what really happened.
@@ -202,23 +203,39 @@ func agentName(a string) string {
 	return a
 }
 
-// judge runs the rules over every event in the call and decides.
-func judge(c call, pol *policy.Policy, o Options) (policy.Decision, event.Event) {
+// judge runs the rules over every event in the call and decides. It also
+// returns the files this call copied a secret into.
+func judge(c call, pol *policy.Policy, o Options) (policy.Decision, event.Event, []string) {
 	var canaries []rules.Canary
 	if reg, err := trap.Load(o.Home); err == nil {
 		canaries = reg.Canaries()
 	}
 	en := &rules.Engine{Home: o.Home, Canaries: canaries, Protected: protected(o), Cwd: c.cwd}
 
+	var recent []audit.Entry
+	if c.session != "" {
+		recent, _ = audit.Tail(config.AuditPath(o.Home), 256<<10)
+	}
+	taint := sessionTaint(recent, c.agent, c.session)
+
 	var fs []rules.Finding
 	seen := map[string]bool{}
 	egress := false
-	for _, e := range c.events {
-		for _, f := range en.Check(e) {
-			if !seen[f.Rule] {
-				seen[f.Rule] = true
-				fs = append(fs, f)
-			}
+	add := func(f rules.Finding) {
+		if !seen[f.Rule] {
+			seen[f.Rule] = true
+			fs = append(fs, f)
+		}
+	}
+	perEvent := make([][]rules.Finding, len(c.events))
+	for i, e := range c.events {
+		efs := en.Check(e)
+		if f, ok := en.SecretEgress(taint, e, efs); ok {
+			efs = append(efs, f)
+		}
+		perEvent[i] = efs
+		for _, f := range efs {
+			add(f)
 		}
 		if rules.IsEgress(e) {
 			egress = true
@@ -228,13 +245,10 @@ func judge(c call, pol *policy.Policy, o Options) (policy.Decision, event.Event)
 	if len(c.events) > 0 {
 		main = c.events[0]
 	}
-	if egress && c.session != "" {
-		recent, _ := audit.Tail(config.AuditPath(o.Home), 256<<10)
-		if audit.Tainted(recent, c.agent, c.session) {
-			info := rules.Catalog[rules.RuleTaintedEgress]
-			fs = append(fs, rules.Finding{Rule: info.ID, Title: info.Title, Category: info.Category,
-				Severity: info.Severity, Detail: "this session read a canary earlier", Evidence: rules.Evidence(main)})
-		}
+	if egress && audit.Tainted(recent, c.agent, c.session) {
+		info := rules.Catalog[rules.RuleTaintedEgress]
+		fs = append(fs, rules.Finding{Rule: info.ID, Title: info.Title, Category: info.Category,
+			Severity: info.Severity, Detail: "this session read a canary earlier", Evidence: rules.Evidence(main)})
 	}
 	// Most severe first, so the reason leads with the worst thing.
 	sort.SliceStable(fs, func(i, j int) bool { return fs[i].Severity > fs[j].Severity })
@@ -248,7 +262,36 @@ func judge(c call, pol *policy.Policy, o Options) (policy.Decision, event.Event)
 	if len(c.events) == 0 {
 		d = pol.Decide(fs, main, o.Home)
 	}
-	return d, main
+	var copies []string
+	if d.Action != policy.Deny && c.session != "" {
+		for i, e := range c.events {
+			copies = append(copies, en.Track(taint, e, perEvent[i])...)
+		}
+	}
+	return d, main, copies
+}
+
+// sessionTaint rebuilds what this session did with real secrets from the
+// audit log: the first call that read one and wasn't blocked, and every
+// file a secret was copied into since.
+func sessionTaint(entries []audit.Entry, agent, session string) *rules.Taint {
+	t := &rules.Taint{}
+	if session == "" {
+		return t
+	}
+	for _, e := range entries {
+		if e.Agent != agent || e.Session != session || e.Decision == policy.Deny.String() {
+			continue
+		}
+		if t.What == "" && rules.ReadsSecret(e.Rules) {
+			t.At, t.What = e.Time, e.Evidence
+			if t.What == "" {
+				t.What = e.Tool
+			}
+		}
+		t.Copies = append(t.Copies, e.SecretCopies...)
+	}
+	return t
 }
 
 func protected(o Options) []string {

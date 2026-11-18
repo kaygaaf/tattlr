@@ -208,6 +208,8 @@ func Run(o Options) (*Result, error) {
 		}
 		// Forked, resumed and set-aside Claude transcripts repeat earlier
 		// calls under the same tool_use id. Oldest session wins.
+		// Real secrets read so far, per session, for secret-then-egress.
+		taints := map[string]*rules.Taint{}
 		var seenCall map[string]bool
 		if u, ok := p.(interface{ UniqueCallIDs() bool }); ok && u.UniqueCallIDs() {
 			seenCall = map[string]bool{}
@@ -239,16 +241,29 @@ func Run(o Options) (*Result, error) {
 					res.Last = e.Time
 				}
 				fs := en.Check(e)
+				blocked := false
+				for _, k := range eventKeys(e) {
+					if denied[k] {
+						blocked = true
+					}
+				}
+				t := taints[s.ID]
+				if t == nil {
+					t = &rules.Taint{}
+					taints[s.ID] = t
+				}
+				if f, ok := en.SecretEgress(t, e, fs); ok {
+					fs = append(fs, f)
+				}
+				if !blocked {
+					// A blocked read never happened, so it can't taint.
+					en.Track(t, e, fs)
+				}
 				if len(fs) == 0 {
 					continue
 				}
 				st.Flagged++
-				m := Moment{Event: fs[0].Event, Evidence: fs[0].Evidence}
-				for _, k := range eventKeys(e) {
-					if denied[k] {
-						m.Blocked = true
-					}
-				}
+				m := Moment{Event: fs[0].Event, Evidence: fs[0].Evidence, Blocked: blocked}
 				sort.SliceStable(fs, func(i, j int) bool { return fs[i].Severity > fs[j].Severity })
 				for _, f := range fs {
 					res.Findings = append(res.Findings, f)

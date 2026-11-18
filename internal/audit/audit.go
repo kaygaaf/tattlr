@@ -29,6 +29,9 @@ type Entry struct {
 	Severity  string    `json:"severity,omitempty"`
 	Reason    string    `json:"reason,omitempty"`
 	Tainted   bool      `json:"tainted,omitempty"` // this call touched a canary
+	// SecretCopies lists files this call copied a real secret into, so a
+	// later call that sends one of them can be linked back to the read.
+	SecretCopies []string `json:"secret_copies,omitempty"`
 	// Approval is set when the ask went to tattlr ui: approved, denied or
 	// timed out.
 	Approval string `json:"approval,omitempty"`

@@ -103,6 +103,7 @@ rules:
   canary: deny
   self-protect: deny
   tainted-egress: deny
+  secret-then-egress: ask
   remote-code: deny
   exfil: deny
   disk-wipe: deny
@@ -203,9 +204,11 @@ func Parse(src string) (*Policy, error) {
 		return nil, err
 	}
 	p := &Policy{
-		Mode:        Protect,
-		Defaults:    map[rules.Severity]Action{rules.Critical: Deny, rules.High: Ask, rules.Medium: Allow, rules.Low: Allow},
-		Rules:       map[string]Action{},
+		Mode:     Protect,
+		Defaults: map[rules.Severity]Action{rules.Critical: Deny, rules.High: Ask, rules.Medium: Allow, rules.Low: Allow},
+		// Reading .env and then sending something is often fine, so this
+		// one asks even in policies written before the rule existed.
+		Rules:       map[string]Action{rules.RuleSecretThenEgress: Ask},
 		CanaryReads: Allow,
 
 		ApprovalTimeout: DefaultApprovalTimeout,
