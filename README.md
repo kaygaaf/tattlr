@@ -34,7 +34,7 @@ brew install kaygaaf/tap/tattlr
 # npm (no postinstall script; the binary comes as a per-platform package)
 npm i -g tattlr
 
-# Go 1.22 or newer
+# Go 1.26 or newer
 go install github.com/kaygaaf/tattlr/cmd/tattlr@latest
 ```
 

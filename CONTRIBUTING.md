@@ -15,7 +15,7 @@ gofmt -l .           # should print nothing
 golangci-lint run
 ```
 
-You need Go 1.22 or newer. Packaging has its own checks if you touch it:
+You need Go 1.26 or newer. Packaging has its own checks if you touch it:
 
 ```sh
 goreleaser release --snapshot --clean   # builds dist/
