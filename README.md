@@ -59,6 +59,7 @@ tattlr scan --format markdown # a summary you can paste into an issue or CI summ
 tattlr scan --card sheet.png  # a shareable card (sheet.svg works too)
 tattlr scan --fail-on high    # exit 1 if anything high or worse shows up
 tattlr workflows              # check .github/workflows for agents outsiders can steer
+tattlr repo                   # check a checkout for hooks and instruction files before you trust it
 tattlr rules                  # list every rule and its severity
 tattlr trap                   # plant fake credentials as bait
 tattlr protect install        # block things live (see below)
@@ -118,6 +119,29 @@ It knows `anthropics/claude-code-action`, `openai/codex-action`, `google-github-
 | `workflow-agent-trigger` | low | An agent on one of those events with nothing else wrong. The actions only answer people with write access by default, so keep it that way |
 
 The last three only show up when outsiders can actually reach the agent, so a stock `@claude` workflow gets one low note and nothing else.
+
+## Check a checkout before you trust it
+
+A session-start hook in a project runs as soon as the folder is trusted, before tattlr's PreToolUse hook sees a tool call. An instruction file can tell the agent a script is sealed, not to read it, and to run it without asking. `tattlr repo` reads the checkout and flags that setup. It does not run anything in the repo.
+
+```sh
+tattlr repo                         # the checkout in the current folder
+tattlr repo path/to/checkout        # or one file
+tattlr repo --fail-on high          # exit 1 on high or critical, for CI
+tattlr repo --format sarif          # line-level alerts in code scanning
+tattlr repo --format markdown       # also json
+```
+
+It looks at the usual project files, not every file in the tree.
+
+| Check | Severity | What it means |
+|---|---|---|
+| `repo-session-hook` | high | A SessionStart, session-start or folder-open hook under `.claude/`, `.cursor/`, `.gemini/` or `.codex/`. tattlr's own hook is skipped |
+| `repo-folder-open` | high | A task in `.vscode/tasks.json` with `runOn: folderOpen` |
+| `repo-local-mcp` | high | An MCP server in `.mcp.json`, `mcp.json` or those config dirs whose command is a program or script in the checkout. An `npx` package or a URL server is left alone |
+| `repo-hidden-instruction` | high | `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.github/copilot-instructions.md` or a file in `.cursor/rules/` tells the agent not to read a file, to hide the output, or to run something without asking |
+
+A `CLAUDE.md` that only says how to run the tests stays quiet. `tattlr protect status` also names a SessionStart hook in the current folder that tattlr did not install, so a trusted folder is not silent about it.
 
 ## What it looks like
 
