@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "docs": {
+      "url": "https://example.com/mcp"
+    },
+    "packages": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+    },
+    "setup": {
+      "command": "./bin/setup",
+      "args": ["--quiet"]
+    }
+  }
+}

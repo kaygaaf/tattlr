@@ -75,6 +75,7 @@ Usage:
   tattlr ui                a local web page: live timeline, rap sheet, approval inbox
   tattlr hook <agent>      what the agent hooks call (reads one tool call as JSON on stdin)
   tattlr workflows [path]  flag GitHub workflows where outsiders can steer an agent
+  tattlr repo [path]       flag hooks and instruction files before you trust a checkout
   tattlr rules             list what tattlr looks for
   tattlr version
 
@@ -99,6 +100,8 @@ func Run(args []string, env Env) int {
 		return runRules(env)
 	case "workflows", "workflow":
 		return runWorkflows(args[1:], env)
+	case "repo":
+		return runRepo(args[1:], env)
 	case "protect":
 		return runProtect(args[1:], env)
 	case "hook":

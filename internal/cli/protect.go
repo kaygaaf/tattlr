@@ -15,6 +15,7 @@ import (
 	"github.com/kaygaaf/tattlr/internal/hook"
 	"github.com/kaygaaf/tattlr/internal/policy"
 	"github.com/kaygaaf/tattlr/internal/protect"
+	"github.com/kaygaaf/tattlr/internal/repo"
 )
 
 func runHook(args []string, env Env) int {
@@ -129,9 +130,10 @@ func protectStatus(home, bin string, asJSON bool, env Env) int {
 	}
 	st := protect.Status(home, bin, env.Now)
 	test := selfTest(home, bin)
+	hooks := projectSessionHooks()
 	if asJSON {
 		out := map[string]any{"mode": pol.Mode, "policy": config.PolicyPath(home), "audit_log": config.AuditPath(home),
-			"agents": st, "self_test": test}
+			"agents": st, "self_test": test, "project_hooks": hooks}
 		if perr != nil {
 			out["policy_error"] = perr.Error()
 		}
@@ -149,22 +151,48 @@ func protectStatus(home, bin string, asJSON bool, env Env) int {
 	fmt.Fprintf(w, "Self-test: %s\n\n", test)
 	if len(st) == 0 {
 		fmt.Fprintln(w, "No agent configs found. Run: tattlr protect install --agent claude")
-		return 0
+	} else {
+		for _, s := range st {
+			state := "not hooked up"
+			if s.Installed {
+				state = "hooked up"
+			}
+			fmt.Fprintf(w, "%-7s %-13s %s\n", s.Agent, state, tildeHome(s.Config, home))
+			if s.Installed {
+				fmt.Fprintf(w, "        last 24h: %s checked, %d stopped or asked\n", plural(s.Calls24h, "call"), s.Blocked24)
+			}
+			for _, p := range s.Problems {
+				fmt.Fprintf(w, "        ! %s\n", p)
+			}
+		}
 	}
-	for _, s := range st {
-		state := "not hooked up"
-		if s.Installed {
-			state = "hooked up"
-		}
-		fmt.Fprintf(w, "%-7s %-13s %s\n", s.Agent, state, tildeHome(s.Config, home))
-		if s.Installed {
-			fmt.Fprintf(w, "        last 24h: %s checked, %d stopped or asked\n", plural(s.Calls24h, "call"), s.Blocked24)
-		}
-		for _, p := range s.Problems {
-			fmt.Fprintf(w, "        ! %s\n", p)
-		}
+	for _, h := range hooks {
+		fmt.Fprintf(w, "Project: %s:%d  %s\n", h.File, h.Line, h.Detail)
 	}
 	return 0
+}
+
+// projectSessionHooks names SessionStart hooks in the current folder that
+// tattlr did not install. They run before the PreToolUse hook.
+func projectSessionHooks() []repo.Finding {
+	dir, err := os.Getwd()
+	if err != nil {
+		return nil
+	}
+	res, err := repo.Check(dir)
+	if err != nil {
+		return nil
+	}
+	var out []repo.Finding
+	for _, f := range res.Findings {
+		if f.Rule == repo.RuleSessionHook {
+			out = append(out, f)
+		}
+	}
+	if out == nil {
+		return []repo.Finding{}
+	}
+	return out
 }
 
 func modeBlurb(m policy.Mode) string {
