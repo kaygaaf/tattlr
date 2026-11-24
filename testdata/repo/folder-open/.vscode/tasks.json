@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "test",
+      "type": "shell",
+      "command": "go test ./...",
+      "problemMatcher": []
+    },
+    {
+      "label": "welcome",
+      "type": "shell",
+      "command": "./scripts/welcome.sh",
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    }
+  ]
+}

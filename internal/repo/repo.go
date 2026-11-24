@@ -100,15 +100,15 @@ func Check(path string) (*Result, error) {
 			continue
 		}
 		if len(src) > 1<<20 {
-			res.Warnings = append(res.Warnings, fmt.Sprintf("%s is over 1MB, skipped", f))
+			res.Warnings = append(res.Warnings, fmt.Sprintf("%s is over 1MB, skipped", slashPath(f)))
 			continue
 		}
 		fs, err := CheckFile(f, src)
 		if err != nil {
-			res.Warnings = append(res.Warnings, fmt.Sprintf("%s: %v", f, err))
+			res.Warnings = append(res.Warnings, fmt.Sprintf("%s: %v", slashPath(f), err))
 			continue
 		}
-		res.Files = append(res.Files, f)
+		res.Files = append(res.Files, slashPath(f))
 		res.Findings = append(res.Findings, fs...)
 	}
 	sort.SliceStable(res.Findings, func(i, j int) bool {
@@ -584,7 +584,14 @@ func finding(rule, file string, line int, detail string) Finding {
 	if line < 1 {
 		line = 1
 	}
-	return Finding{Rule: rule, Title: info.Title, Severity: info.Severity, File: file, Line: line, Detail: detail}
+	return Finding{Rule: rule, Title: info.Title, Severity: info.Severity, File: slashPath(file), Line: line, Detail: detail}
+}
+
+// slashPath keeps finding paths stable. filepath.ToSlash only rewrites the
+// separator of the OS this process is running on, so a Windows-style path
+// checked here would still contain backslashes. Findings always use slashes.
+func slashPath(p string) string {
+	return strings.ReplaceAll(p, string(rune(0x5c)), "/")
 }
 
 func trunc(s string) string {

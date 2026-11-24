@@ -8,9 +8,9 @@
 /*.svg
 /*.png
 
-# editors and OS junk
+# editors and OS junk. Root only: a checkout fixture needs its own .vscode/.
 .idea/
-.vscode/
+/.vscode/
 *.swp
 .DS_Store
 

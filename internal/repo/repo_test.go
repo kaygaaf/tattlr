@@ -86,6 +86,13 @@ func TestLocalMCP(t *testing.T) {
 	lineHas(t, &fs[0], "./bin/setup")
 }
 
+func TestFindingKeepsSlashPaths(t *testing.T) {
+	f := finding(RuleSessionHook, `C:\repo\.claude\settings.json`, 4, "detail")
+	if f.File != "C:/repo/.claude/settings.json" {
+		t.Fatalf("file %q", f.File)
+	}
+}
+
 func TestFolderOpen(t *testing.T) {
 	fs := fixture(t, "folder-open")
 	if len(fs) != 1 || fs[0].Rule != RuleFolderOpen || fs[0].Severity != rules.High {
