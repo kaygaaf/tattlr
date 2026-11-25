@@ -351,7 +351,7 @@ Every checked call goes to `~/.local/state/tattlr/audit.jsonl`, one JSON line ea
 
 | Agent | Where | Ask | Notes |
 | --- | --- | --- | --- |
-| Claude Code | `PreToolUse` in `~/.claude/settings.json` | Yes | Answers with `permissionDecision` allow, ask or deny |
+| Claude Code | `PreToolUse` in `~/.claude/settings.json` | Yes | Answers with `permissionDecision` allow, ask or deny. The command hook sets `onFailure` to `block` |
 | Codex CLI | `[[hooks.PreToolUse]]` in `~/.codex/config.toml` (or `hooks.json` if you use that) | No, becomes deny | You have to trust the hook once in Codex with `/hooks`. Each file in an `apply_patch` is checked |
 | Cursor | `beforeShellExecution`, `beforeMCPExecution`, `beforeReadFile` and `preToolUse` in `~/.cursor/hooks.json` | Shell and MCP only | Other events turn ask into deny |
 | OpenClaw | The plugin in [`integrations/openclaw`](integrations/openclaw) | Yes, via `requireApproval` | OpenClaw has no hook config file, so it's a small plugin that calls `tattlr hook openclaw` |
@@ -368,6 +368,8 @@ Each of these was run for real on one machine with `tattlr protect install` and 
 | Gemini CLI | 0.66.0 | `gemini -p --yolo --skip-trust` |
 | OpenClaw | 2026.10.8 | `openclaw agent --local` with the plugin installed |
 | Cursor | not run | No Cursor app or account here, so only the config format is checked |
+
+Claude Code 2.1.329 (19 Nov 2026) no longer stops a Code Mode tool call when a PreToolUse hook errors, unless that hook sets `onFailure` to `block`. The command hook tattlr installs already does. The live run in the table is still 2.1.312.
 
 So the hooks and parsers have been checked against the real binaries, but not how a real model reacts when it gets blocked. The real (redacted) logs from those runs are test fixtures in `testdata/live/`.
 

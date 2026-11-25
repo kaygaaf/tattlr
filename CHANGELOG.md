@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- README notes that Claude Code 2.1.329 no longer stops a Code Mode tool call when a PreToolUse hook errors, unless `onFailure` is `block`. The Claude command hook already sets that. The live run is still 2.1.312.
+
 - `tattlr protect status` says skipped, not hooked up, when Gemini will not run the hook. That is `hooksConfig.enabled` set to false, or `tattlr` or the hook command listed in `hooksConfig.disabled`. A Gemini settings file that already has user and project BeforeTool hooks keeps those, and install adds tattlr once.
 - `tattlr protect status` lists session-start hooks and local MCP commands in the home config for Claude Code, Codex, Cursor and Gemini CLI, including `~/.claude.json`. tattlr's own PreToolUse hook is skipped. A URL MCP server is left alone. A home with no extra session-start hooks says so. These run outside the PreToolUse hook.
 - New rule `codex-remote` (high): `codex exec --remote`, `codex --remote`, `codex remote-control` (and `start` or `pair`), and `codex app-server --remote-control` or `daemon enable-remote-control`. A printed pairing code counts too (`Pairing code:`, `manualPairingCode`, or a `chatgpt.com/codex/pair` link). Plain `codex exec` and a local `codex app-server` call, which the trust check uses, stay quiet. Protect asks, and strict mode denies. The hook still only sees the machine it is installed on.
