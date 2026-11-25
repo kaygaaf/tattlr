@@ -55,7 +55,7 @@ func Fill(e *event.Event, name string, args map[string]any) {
 	} else if argv := jsonl.Arr(args, "command"); argv != nil {
 		e.Command = jsonl.ShellScript(argv)
 	}
-	if kind != event.Shell {
+	if kind != event.Shell && kind != event.MCP {
 		e.Command = ""
 	}
 	e.Path = jsonl.FirstStr(args, "file_path", "absolute_path", "path", "notebook_path", "target_file", "filePath", "dir_path")

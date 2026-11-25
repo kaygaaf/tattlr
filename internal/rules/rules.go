@@ -226,7 +226,16 @@ func (en *Engine) Check(e event.Event) []Finding {
 			en.checkURL(u, add)
 		}
 		if e.Kind == event.MCP {
-			// MCP tools that run shell commands or read files.
+			// A command argument is a shell call. A write-like tool name with a
+			// path is a file write. Reads stay on the secret check below.
+			if e.Command != "" {
+				en.checkShell(e.Command, add)
+			}
+			if mcpWritesFile(e.Tool) {
+				for _, p := range splitPaths(e.Path) {
+					en.checkWriteTarget(p, add)
+				}
+			}
 			for _, w := range words(e.Args) {
 				if k := secretKind(w, en.Home); k != "" && looksLikePath(w) {
 					add(RuleSecretRead, k+" via MCP", 0)
@@ -257,6 +266,18 @@ func splitPaths(p string) []string {
 
 func looksLikePath(w string) bool {
 	return strings.Contains(w, "/") || strings.HasPrefix(w, ".")
+}
+
+// mcpWritesFile reports whether an MCP tool name is a file edit, not a read
+// or a shell. "replace" covers Gemini's replace tool and StrReplace.
+func mcpWritesFile(tool string) bool {
+	l := strings.ToLower(tool)
+	for _, w := range []string{"write", "edit", "delete", "patch", "replace", "append"} {
+		if strings.Contains(l, w) {
+			return true
+		}
+	}
+	return false
 }
 
 func (en *Engine) checkWriteTarget(p string, add func(string, string, Severity)) {

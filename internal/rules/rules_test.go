@@ -392,3 +392,31 @@ func TestCodexRemoteDetailAndPairing(t *testing.T) {
 		t.Error("prose about remote control was flagged")
 	}
 }
+
+func TestMCPCommandAndWritePath(t *testing.T) {
+	en := &Engine{Home: "/home/kay"}
+	cases := []struct {
+		name string
+		e    event.Event
+		want string
+		not  string
+	}{
+		{"shell command", event.Event{Kind: event.MCP, Tool: "mcp__shell__run", Command: "sudo rm -rf /"}, RuleSudo, ""},
+		{"gemini shell", event.Event{Kind: event.MCP, Tool: "mcp_shell_run", Command: "docker run --privileged alpine"}, RuleContainer, ""},
+		{"write key", event.Event{Kind: event.MCP, Tool: "mcp__fs__write_file", Path: "/home/kay/.ssh/authorized_keys"}, RuleSSHBackdoor, ""},
+		{"replace key", event.Event{Kind: event.MCP, Tool: "mcp__fs__replace", Path: "/home/kay/.ssh/authorized_keys"}, RuleSSHBackdoor, ""},
+		{"read key", event.Event{Kind: event.MCP, Tool: "mcp__fs__read_file", Path: "/home/kay/.ssh/authorized_keys"}, "", RuleSSHBackdoor},
+		{"create issue", event.Event{Kind: event.MCP, Tool: "mcp__github__create_issue", Args: `{"title":"t"}`}, "", RuleSudo},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := ids(en.Check(c.e))
+			if c.want != "" && !contains(got, c.want) {
+				t.Errorf("want %s, got %v", c.want, got)
+			}
+			if c.not != "" && contains(got, c.not) {
+				t.Errorf("did not want %s, got %v", c.not, got)
+			}
+		})
+	}
+}

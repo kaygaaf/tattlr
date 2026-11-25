@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- MCP tools whose arguments contain a command (`mcp__server__tool` and Gemini's `mcp_` name) go through the same shell rules as Bash. A write, edit, delete, patch, replace or append tool with a path goes through the same write rules, so an MCP write to `authorized_keys` is `ssh-backdoor`. A read tool with that path stays quiet.
 - README notes that Claude Code 2.1.329 no longer stops a Code Mode tool call when a PreToolUse hook errors, unless `onFailure` is `block`. The Claude command hook already sets that. The live run is still 2.1.312.
 
 - `tattlr protect status` says skipped, not hooked up, when Gemini will not run the hook. That is `hooksConfig.enabled` set to false, or `tattlr` or the hook command listed in `hooksConfig.disabled`. A Gemini settings file that already has user and project BeforeTool hooks keeps those, and install adds tattlr once.
