@@ -170,6 +170,21 @@ func TestProtectStatusListsHomeExtras(t *testing.T) {
 	})
 }
 
+func TestTildeHomeUsesSlashes(t *testing.T) {
+	home := t.TempDir()
+	p := filepath.Join(home, ".claude", "settings.json")
+	got := tildeHome(p, home)
+	if strings.Contains(got, `\`) || !strings.Contains(got, ".claude/settings.json") {
+		t.Fatalf("tildeHome(%q) = %q", p, got)
+	}
+	// A Windows-style path must not keep its separators, even on macOS where
+	// filepath.Rel does not rewrite them.
+	win := tildeHome(`C:\Users\kay\.claude\settings.json`, `C:\Users\kay`)
+	if strings.Contains(win, `\`) || !strings.Contains(win, ".claude/settings.json") {
+		t.Fatalf("windows tildeHome = %q", win)
+	}
+}
+
 func TestTempBin(t *testing.T) {
 	if tempBin("/home/kay/.npm/_npx/1a2b/node_modules/tattlr-linux-x64/bin/tattlr") == "" {
 		t.Error("npx cache path should warn")

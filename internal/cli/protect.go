@@ -259,10 +259,11 @@ func selfTest(home, bin string) string {
 }
 
 func tildeHome(p, home string) string {
+	shown := p
 	if rel, err := filepath.Rel(home, p); err == nil && !strings.HasPrefix(rel, "..") {
-		return "~/" + rel
+		shown = "~/" + rel
 	}
-	return p
+	return strings.ReplaceAll(shown, string(rune(0x5c)), "/")
 }
 
 func plural(n int, word string) string {
