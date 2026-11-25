@@ -124,6 +124,64 @@ func Check(path string) (*Result, error) {
 	return res, nil
 }
 
+// homeFiles are agent configs in a home folder, not a checkout.
+// A missing file is fine.
+var homeFiles = []string{
+	".claude/settings.json",
+	".claude/settings.local.json",
+	".claude.json",
+	".claude/mcp.json",
+	".cursor/hooks.json",
+	".cursor/mcp.json",
+	".gemini/settings.json",
+	".gemini/mcp.json",
+	".codex/hooks.json",
+	".codex/config.toml",
+	".codex/mcp.json",
+}
+
+// CheckHome lists session-start hooks and local MCP commands in a home
+// folder's agent configs. It skips tattlr's own hook. It does not run
+// anything, and it does not look at instruction files.
+func CheckHome(home string) (*Result, error) {
+	res := &Result{Files: []string{}, Findings: []Finding{}}
+	for _, rel := range homeFiles {
+		p := filepath.Join(home, filepath.FromSlash(rel))
+		fi, err := os.Stat(p)
+		if err != nil || fi.IsDir() {
+			continue
+		}
+		src, err := os.ReadFile(p)
+		if err != nil {
+			res.Warnings = append(res.Warnings, err.Error())
+			continue
+		}
+		if len(src) > 1<<20 {
+			res.Warnings = append(res.Warnings, fmt.Sprintf("%s is over 1MB, skipped", slashPath(p)))
+			continue
+		}
+		fs, err := CheckFile(p, src)
+		if err != nil {
+			res.Warnings = append(res.Warnings, fmt.Sprintf("%s: %v", slashPath(p), err))
+			continue
+		}
+		res.Files = append(res.Files, slashPath(p))
+		for _, f := range fs {
+			if f.Rule == RuleSessionHook || f.Rule == RuleLocalMCP {
+				res.Findings = append(res.Findings, f)
+			}
+		}
+	}
+	sort.SliceStable(res.Findings, func(i, j int) bool {
+		a, b := res.Findings[i], res.Findings[j]
+		if a.File != b.File {
+			return a.File < b.File
+		}
+		return a.Line < b.Line
+	})
+	return res, nil
+}
+
 // CheckFile checks one file. name is used to decide what kind of file it is.
 func CheckFile(name string, src []byte) ([]Finding, error) {
 	switch {

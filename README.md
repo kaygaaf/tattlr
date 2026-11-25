@@ -141,7 +141,7 @@ It looks at the usual project files, not every file in the tree.
 | `repo-local-mcp` | high | An MCP server in `.mcp.json`, `mcp.json` or those config dirs whose command is a program or script in the checkout. An `npx` package or a URL server is left alone |
 | `repo-hidden-instruction` | high | `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.github/copilot-instructions.md` or a file in `.cursor/rules/` tells the agent not to read a file, to hide the output, or to run something without asking |
 
-A `CLAUDE.md` that only says how to run the tests stays quiet. `tattlr protect status` also names a SessionStart hook in the current folder that tattlr did not install, so a trusted folder is not silent about it.
+A `CLAUDE.md` that only says how to run the tests stays quiet. `tattlr protect status` names a SessionStart hook in the current folder that tattlr did not install, and it lists session-start hooks and local MCP commands in your home config (`~/.claude/settings.json`, `~/.claude.json`, and the Codex, Cursor and Gemini user configs) that tattlr did not install. Those run outside the PreToolUse hook. A home with only tattlr's hook says there are no extra session-start hooks.
 
 ## What it looks like
 

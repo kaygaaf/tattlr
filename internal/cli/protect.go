@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -131,9 +132,10 @@ func protectStatus(home, bin string, asJSON bool, env Env) int {
 	st := protect.Status(home, bin, env.Now)
 	test := selfTest(home, bin)
 	hooks := projectSessionHooks()
+	homeHooks := homeConfigExtras(home)
 	if asJSON {
 		out := map[string]any{"mode": pol.Mode, "policy": config.PolicyPath(home), "audit_log": config.AuditPath(home),
-			"agents": st, "self_test": test, "project_hooks": hooks}
+			"agents": st, "self_test": test, "project_hooks": hooks, "home_hooks": homeHooks}
 		if perr != nil {
 			out["policy_error"] = perr.Error()
 		}
@@ -166,10 +168,45 @@ func protectStatus(home, bin string, asJSON bool, env Env) int {
 			}
 		}
 	}
+	printHomeExtras(w, home, homeHooks)
 	for _, h := range hooks {
 		fmt.Fprintf(w, "Project: %s:%d  %s\n", h.File, h.Line, h.Detail)
 	}
 	return 0
+}
+
+// homeConfigExtras lists session-start hooks and local MCP commands in the
+// home folder that tattlr did not install.
+func homeConfigExtras(home string) []repo.Finding {
+	res, err := repo.CheckHome(home)
+	if err != nil || res == nil || len(res.Findings) == 0 {
+		return []repo.Finding{}
+	}
+	return res.Findings
+}
+
+func printHomeExtras(w io.Writer, home string, hooks []repo.Finding) {
+	sessions := 0
+	for _, h := range hooks {
+		if h.Rule == repo.RuleSessionHook {
+			sessions++
+		}
+		detail := h.Detail
+		if h.Rule == repo.RuleLocalMCP {
+			detail = strings.Replace(detail, ", a program in this checkout", "", 1)
+		}
+		fmt.Fprintf(w, "Home: %s:%d  %s\n", showPath(h.File, home), h.Line, detail)
+	}
+	if sessions == 0 {
+		fmt.Fprintln(w, "No extra session-start hooks.")
+	}
+	if len(hooks) > 0 {
+		fmt.Fprintln(w, "These run outside the PreToolUse hook.")
+	}
+}
+
+func showPath(p, home string) string {
+	return strings.ReplaceAll(tildeHome(p, home), string(rune(0x5c)), "/")
 }
 
 // projectSessionHooks names SessionStart hooks in the current folder that
