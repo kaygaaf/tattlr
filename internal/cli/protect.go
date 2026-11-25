@@ -156,7 +156,9 @@ func protectStatus(home, bin string, asJSON bool, env Env) int {
 	} else {
 		for _, s := range st {
 			state := "not hooked up"
-			if s.Installed {
+			if s.Installed && s.Inactive != "" {
+				state = "skipped"
+			} else if s.Installed {
 				state = "hooked up"
 			}
 			fmt.Fprintf(w, "%-7s %-13s %s\n", s.Agent, state, tildeHome(s.Config, home))

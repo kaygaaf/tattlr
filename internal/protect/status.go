@@ -1,6 +1,7 @@
 package protect
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -22,6 +23,8 @@ type AgentStatus struct {
 	Calls24h  int      `json:"calls_24h"`
 	Blocked24 int      `json:"blocked_24h"`
 	Problems  []string `json:"problems,omitempty"`
+	// Inactive is why the hook is in the config but the agent will not run it.
+	Inactive string `json:"inactive,omitempty"`
 	// Trust is Codex's own verdict on the tattlr hook, when it could be read.
 	Trust    string `json:"codex_trust,omitempty"`
 	TrustVia string `json:"codex_trust_source,omitempty"`
@@ -79,6 +82,12 @@ func Status(home, bin string, now time.Time) []AgentStatus {
 				}
 			}
 		}
+		if a == "gemini" && s.Installed {
+			if why := geminiInactive(b, s.Commands); why != "" {
+				s.Inactive = why
+				s.Problems = append(s.Problems, why)
+			}
+		}
 		for _, e := range recent {
 			if e.Agent == agentEventName(a) && now.Sub(e.Time) < 24*time.Hour {
 				s.Calls24h++
@@ -117,4 +126,44 @@ func agentEventName(a string) string {
 		return "claude-code"
 	}
 	return a
+}
+
+// geminiInactive reports why Gemini CLI 0.70 will not run a hook that is
+// present in settings. hooksConfig.enabled false skips every hook. A name in
+// hooksConfig.disabled skips that hook; Gemini matches the hook's name, or
+// the command when the name is empty.
+func geminiInactive(raw []byte, commands []string) string {
+	var root map[string]json.RawMessage
+	if json.Unmarshal(raw, &root) != nil {
+		return ""
+	}
+	hcRaw, ok := root["hooksConfig"]
+	if !ok {
+		return ""
+	}
+	var hc struct {
+		Enabled  *bool    `json:"enabled"`
+		Disabled []string `json:"disabled"`
+	}
+	if json.Unmarshal(hcRaw, &hc) != nil {
+		return ""
+	}
+	if hc.Enabled != nil && !*hc.Enabled {
+		return "Gemini skips this hook because hooksConfig.enabled is false"
+	}
+	for _, name := range hc.Disabled {
+		if name == "tattlr" || containsStr(commands, name) {
+			return "Gemini skips this hook because it is listed in hooksConfig.disabled"
+		}
+	}
+	return ""
+}
+
+func containsStr(ss []string, want string) bool {
+	for _, s := range ss {
+		if s == want {
+			return true
+		}
+	}
+	return false
 }

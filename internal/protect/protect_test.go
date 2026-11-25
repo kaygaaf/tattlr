@@ -374,6 +374,104 @@ func TestGeminiRoundTrip(t *testing.T) {
 	}
 }
 
+func TestGeminiStatusSkippedWhenGeminiWillNotRunTheHook(t *testing.T) {
+	home := t.TempDir()
+	p := filepath.Join(home, ".gemini", "settings.json")
+	hooked := func(extra map[string]any) {
+		t.Helper()
+		root := map[string]any{
+			"hooks": map[string]any{
+				"BeforeTool": []any{map[string]any{
+					"matcher": ".*",
+					"hooks": []any{map[string]any{
+						"type": "command", "name": "tattlr", "command": testCmd + " hook gemini",
+					}},
+				}},
+			},
+		}
+		for k, v := range extra {
+			root[k] = v
+		}
+		b, err := json.Marshal(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		write(t, p, string(b))
+	}
+	gemini := func() AgentStatus {
+		t.Helper()
+		for _, s := range Status(home, testBin, time.Now()) {
+			if s.Agent == "gemini" {
+				return s
+			}
+		}
+		t.Fatal("no gemini status")
+		return AgentStatus{}
+	}
+
+	hooked(map[string]any{"hooksConfig": map[string]any{"enabled": false}})
+	if st := gemini(); !st.Installed || !strings.Contains(st.Inactive, "hooksConfig.enabled") {
+		t.Fatalf("enabled false: %+v", st)
+	}
+
+	hooked(map[string]any{"hooksConfig": map[string]any{"disabled": []any{"lint", "tattlr"}}})
+	if st := gemini(); !st.Installed || !strings.Contains(st.Inactive, "hooksConfig.disabled") {
+		t.Fatalf("named in disabled: %+v", st)
+	}
+
+	hooked(map[string]any{"hooksConfig": map[string]any{"disabled": []any{testCmd + " hook gemini"}}})
+	if st := gemini(); !strings.Contains(st.Inactive, "hooksConfig.disabled") {
+		t.Fatalf("command in disabled: %+v", st)
+	}
+
+	hooked(map[string]any{"hooksConfig": map[string]any{"disabled": []any{"lint"}}})
+	if st := gemini(); !st.Installed || st.Inactive != "" {
+		t.Fatalf("other hook disabled should still run: %+v", st)
+	}
+
+	hooked(nil)
+	if st := gemini(); !st.Installed || st.Inactive != "" {
+		t.Fatalf("no hooksConfig: %+v", st)
+	}
+}
+
+func TestGeminiInstallKeepsUserAndProjectHooks(t *testing.T) {
+	home := t.TempDir()
+	p := filepath.Join(home, ".gemini", "settings.json")
+	// Gemini concatenates user and project BeforeTool arrays. A settings file
+	// that already holds both must keep them, and gain tattlr once.
+	orig := `{
+  "hooks": {
+    "BeforeTool": [
+      {"matcher": "write_file", "hooks": [{"type": "command", "name": "user-lint", "command": "./lint.sh"}]},
+      {"matcher": ".*", "hooks": [{"type": "command", "name": "project-sec", "command": ".gemini/hooks/security.sh"}]}
+    ]
+  }
+}
+`
+	write(t, p, orig)
+	o, _ := opts(home, "gemini")
+	if err := Install(o); err != nil {
+		t.Fatal(err)
+	}
+	groups := mustJSON(t, read(t, p))["hooks"].(map[string]any)["BeforeTool"].([]any)
+	if len(groups) != 3 {
+		t.Fatalf("groups: %d %v", len(groups), groups)
+	}
+	blob := read(t, p)
+	for _, want := range []string{"./lint.sh", ".gemini/hooks/security.sh", testCmd + " hook gemini"} {
+		if !strings.Contains(blob, want) {
+			t.Errorf("missing %q\n%s", want, blob)
+		}
+	}
+	if err := Install(o); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(mustJSON(t, read(t, p))["hooks"].(map[string]any)["BeforeTool"].([]any)); n != 3 {
+		t.Fatalf("second install: %d groups", n)
+	}
+}
+
 func TestGeminiFreshFileAndHooksOffWarning(t *testing.T) {
 	home := t.TempDir()
 	p := filepath.Join(home, ".gemini", "settings.json")

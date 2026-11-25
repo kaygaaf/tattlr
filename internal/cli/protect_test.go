@@ -207,3 +207,28 @@ func TestTempBin(t *testing.T) {
 		t.Errorf("normal install warned: %s", got)
 	}
 }
+
+func TestGeminiStatusSaysSkipped(t *testing.T) {
+	home := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(home, ".gemini"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	settings := `{
+  "hooksConfig": {"enabled": false},
+  "hooks": {"BeforeTool": [{"matcher": ".*", "hooks": [{"name": "tattlr", "type": "command", "command": "/usr/local/bin/tattlr hook gemini"}]}]}
+}
+`
+	if err := os.WriteFile(filepath.Join(home, ".gemini", "settings.json"), []byte(settings), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	code, out, errs := run(t, home, "", false, "protect", "status")
+	if code != 0 {
+		t.Fatalf("exit %d: %s\n%s", code, errs, out)
+	}
+	if !strings.Contains(out, "gemini  skipped") || strings.Contains(out, "gemini  hooked up") {
+		t.Fatalf("status:\n%s", out)
+	}
+	if !strings.Contains(out, "hooksConfig.enabled is false") {
+		t.Fatalf("missing reason:\n%s", out)
+	}
+}

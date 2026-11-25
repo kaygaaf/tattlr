@@ -384,6 +384,7 @@ So the hooks and parsers have been checked against the real binaries, but not ho
 - OpenClaw 2026.10 asks for consent before installing a local plugin and before letting it hook tool calls, so a scripted install needs `--force --accept-capabilities` (see the [plugin README](integrations/openclaw)).
 - OpenClaw doesn't tell plugins the working directory, so the plugin reports the gateway's own directory. Fine for `openclaw agent --local` in your project, maybe wrong for a long-running gateway.
 - Gemini CLI lets a call through if a hook crashes or times out, so strict mode's "block if tattlr fails" can't be enforced there. tattlr still blocks in strict mode when it runs and can't read the request.
+- If Gemini has hooks switched off (`hooksConfig.enabled` set to false) or lists `tattlr` in `hooksConfig.disabled`, `tattlr protect status` says skipped instead of hooked up. Gemini concatenates user and project BeforeTool hooks, so install leaves those and adds tattlr once.
 - If your `~/.gemini/settings.json` has comments in it, `tattlr protect` refuses to touch it. Take the comments out or add the hook by hand.
 - Gemini CLI also has its own TOML policy engine. tattlr doesn't write policies for it; the hook is enough.
 - Gemini CLI's `ask` comes from the source, which still handles it, though the docs don't mention it. The live run only covered allow and deny.
