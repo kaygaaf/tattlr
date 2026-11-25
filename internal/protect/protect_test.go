@@ -459,10 +459,22 @@ func TestGeminiInstallKeepsUserAndProjectHooks(t *testing.T) {
 		t.Fatalf("groups: %d %v", len(groups), groups)
 	}
 	blob := read(t, p)
-	for _, want := range []string{"./lint.sh", ".gemini/hooks/security.sh", testCmd + " hook gemini"} {
+	for _, want := range []string{"./lint.sh", ".gemini/hooks/security.sh"} {
 		if !strings.Contains(blob, want) {
 			t.Errorf("missing %q\n%s", want, blob)
 		}
+	}
+	wantCmd := testCmd + " hook gemini"
+	found := false
+	for _, g := range groups {
+		for _, h := range g.(map[string]any)["hooks"].([]any) {
+			if h.(map[string]any)["command"] == wantCmd {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Errorf("missing command %q\n%s", wantCmd, blob)
 	}
 	if err := Install(o); err != nil {
 		t.Fatal(err)
