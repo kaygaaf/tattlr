@@ -3,10 +3,10 @@ module github.com/kaygaaf/tattlr
 go 1.26.0
 
 require (
-	github.com/klauspost/compress v1.20.4
+	github.com/klauspost/compress v1.20.5
 	go.yaml.in/yaml/v3 v3.0.6
 	golang.org/x/image v0.48.0
-	modernc.org/sqlite v1.62.0
+	modernc.org/sqlite v1.63.0
 )
 
 require (
