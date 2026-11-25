@@ -11,7 +11,7 @@ type W = testutil.Want
 
 func TestParse(t *testing.T) {
 	files := Parser{}.Discover(testutil.Home(t))
-	if len(files) != 2 {
+	if len(files) != 3 {
 		t.Fatalf("discovered %v", files)
 	}
 	var ss []*event.Session
@@ -46,5 +46,19 @@ func TestParse(t *testing.T) {
 			}
 			testutil.Check(t, s.Events, c.want)
 		})
+	}
+	child := testutil.Find(t, ss, "b2c3d4e5-1111-4aaa-8bbb-ccccddddeeee")
+	const parent = "a1b2c3d4-0000-4e5f-8a9b-c0d1e2f3a4b5"
+	if child.Parent != parent || child.Project != "/Users/kay/code/infra-scripts" {
+		t.Fatalf("parent=%q project=%q", child.Parent, child.Project)
+	}
+	testutil.Check(t, child.Events, []W{
+		{Kind: event.Shell, Tool: "run_shell_command", Command: "history -c"},
+		{Kind: event.MCP, Tool: "mcp_fs_write_file", Path: "/Users/kay/.ssh/authorized_keys"},
+	})
+	for _, e := range child.Events {
+		if e.SessionID != parent {
+			t.Errorf("session = %q, want parent", e.SessionID)
+		}
 	}
 }

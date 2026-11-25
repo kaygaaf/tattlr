@@ -37,8 +37,12 @@ type Event struct {
 
 // Session groups the events parsed from one log file.
 type Session struct {
-	Agent   string
-	ID      string
+	Agent string
+	ID    string
+	// Parent is set when this file is a subagent transcript. Scan folds
+	// those events into the parent session. Claude already shares the
+	// parent's id, so Parent stays empty there.
+	Parent  string
 	Project string
 	Source  string
 	Start   time.Time

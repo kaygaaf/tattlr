@@ -2,6 +2,10 @@
 // ~/.cursor/projects/<encoded-path>/agent-transcripts/<id>/<id>.jsonl
 // (and the flat agent-transcripts/<id>.jsonl layout).
 //
+// A subagent transcript is agent-transcripts/<parent>/subagents/<id>.jsonl.
+// That layout is what readers of Cursor's on-disk files agree on. The parent
+// id is the directory above subagents/.
+//
 // Lines are {role, message:{content:[...]}} with Anthropic-style blocks:
 // tool_use {id, name, input} and tool_result {tool_use_id, content}. The
 // transcripts carry no per-line timestamps, so tattlr uses the file mtime.
@@ -33,7 +37,12 @@ func (Parser) Discover(home string) []string {
 func (Parser) Parse(path string) (*event.Session, error) {
 	s := &event.Session{Agent: event.AgentCursor, Source: path, Start: jsonl.ModTime(path)}
 	s.ID = strings.TrimSuffix(filepath.Base(path), ".jsonl")
+	s.Parent = parentFromPath(path)
 	s.Project = projectFromPath(path)
+	sid := s.ID
+	if s.Parent != "" {
+		sid = s.Parent
+	}
 	idx := map[string]int{}
 	err := jsonl.EachLine(path, func(m map[string]any) {
 		ts := jsonl.Time(m["timestamp"])
@@ -44,7 +53,7 @@ func (Parser) Parse(path string) (*event.Session, error) {
 			blk, _ := b.(map[string]any)
 			switch jsonl.Str(blk, "type") {
 			case "tool_use":
-				e := event.Event{Agent: event.AgentCursor, SessionID: s.ID, Project: s.Project, Source: path,
+				e := event.Event{Agent: event.AgentCursor, SessionID: sid, Project: s.Project, Source: path,
 					Time: ts, CallID: jsonl.Str(blk, "id")}
 				toolmap.Fill(&e, jsonl.Str(blk, "name"), jsonl.Obj(blk, "input"))
 				idx[e.CallID] = len(s.Events)
@@ -137,4 +146,16 @@ func slashDir(p string) string {
 		return "/"
 	}
 	return p[:i]
+}
+
+// parentFromPath is the session id above a subagents/ directory. A main
+// transcript has no such directory.
+func parentFromPath(path string) string {
+	parts := strings.Split(filepath.ToSlash(path), "/")
+	for i, p := range parts {
+		if p == "subagents" && i >= 2 && parts[i-2] == "agent-transcripts" {
+			return parts[i-1]
+		}
+	}
+	return ""
 }

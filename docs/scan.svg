@@ -12,27 +12,27 @@
 </g>
 <text id="l1" class="l" x="20" y="86"></text>
 <rect class="l" id="r2_1" x="28.4" y="91" width="67.4" height="17" fill="#d70000"/>
-<text id="l2" class="l" x="20" y="104"> <tspan class="b" style="fill:#ffffff"> TATTLR </tspan>  <tspan class="b">RAP SHEET</tspan>  <tspan class="d">11 sessions, 48 tool calls, Aug 3 2025 to Oct 27 2026</tspan></text>
+<text id="l2" class="l" x="20" y="104"> <tspan class="b" style="fill:#ffffff"> TATTLR </tspan>  <tspan class="b">RAP SHEET</tspan>  <tspan class="d">11 sessions, 54 tool calls, Aug 3 2025 to Oct 27 2026</tspan></text>
 <text id="l3" class="l" x="20" y="122"></text>
-<text id="l4" class="l" x="20" y="140"> 35 of 48 tool calls looked sketchy. Most wanted: claude-code (public enemy).</text>
+<text id="l4" class="l" x="20" y="140"> 41 of 54 tool calls looked sketchy. Most wanted: claude-code (public enemy).</text>
 <text id="l5" class="l" x="20" y="158"> The fake keys got read 4 times. Nobody asked for them.</text>
 <text id="l6" class="l" x="20" y="176"></text>
 <text id="l7" class="l" x="20" y="194"> <tspan class="b">AGENT         SESSIONS  CALLS  FLAGGED  CRIT  HIGH   MED   LOW  SCORE  VERDICT</tspan></text>
 <rect class="l" id="r8_1" x="357.2" y="199" width="42.1" height="17" fill="#d70000"/>
 <text id="l8" class="l" x="20" y="212"> claude-code          4     22       15 <tspan class="b" style="fill:#ffffff">    4</tspan> <tspan class="b" style="fill:#f38ba8">   11</tspan> <tspan style="fill:#f9e2af">    4</tspan> <tspan class="d">    1</tspan>    201  <tspan class="b" style="fill:#f38ba8">public enemy</tspan></text>
 <rect class="l" id="r9_1" x="357.2" y="217" width="42.1" height="17" fill="#d70000"/>
-<text id="l9" class="l" x="20" y="230"> gemini-cli           2      6        5 <tspan class="b" style="fill:#ffffff">    3</tspan> <tspan class="b" style="fill:#f38ba8">    3</tspan> <tspan style="fill:#f9e2af">    1</tspan> <tspan class="d">    0</tspan>    102  <tspan style="fill:#f38ba8">menace</tspan></text>
+<text id="l9" class="l" x="20" y="230"> codex                2     12        9 <tspan class="b" style="fill:#ffffff">    2</tspan> <tspan class="b" style="fill:#f38ba8">    7</tspan> <tspan style="fill:#f9e2af">    5</tspan> <tspan class="d">    0</tspan>    121  <tspan class="b" style="fill:#f38ba8">public enemy</tspan></text>
 <rect class="l" id="r10_1" x="357.2" y="235" width="42.1" height="17" fill="#d70000"/>
-<text id="l10" class="l" x="20" y="248"> codex                2     10        7 <tspan class="b" style="fill:#ffffff">    1</tspan> <tspan class="b" style="fill:#f38ba8">    6</tspan> <tspan style="fill:#f9e2af">    5</tspan> <tspan class="d">    0</tspan>     88  <tspan style="fill:#f38ba8">menace</tspan></text>
+<text id="l10" class="l" x="20" y="248"> gemini-cli           2      8        7 <tspan class="b" style="fill:#ffffff">    3</tspan> <tspan class="b" style="fill:#f38ba8">    5</tspan> <tspan style="fill:#f9e2af">    1</tspan> <tspan class="d">    0</tspan>    118  <tspan style="fill:#f38ba8">menace</tspan></text>
 <rect class="l" id="r11_1" x="357.2" y="253" width="42.1" height="17" fill="#d70000"/>
 <text id="l11" class="l" x="20" y="266"> openclaw             2      6        5 <tspan class="b" style="fill:#ffffff">    2</tspan> <tspan class="b" style="fill:#f38ba8">    4</tspan> <tspan style="fill:#f9e2af">    1</tspan> <tspan class="d">    0</tspan>     85  <tspan style="fill:#f38ba8">menace</tspan></text>
-<text id="l12" class="l" x="20" y="284"> cursor               1      4        3 <tspan class="d">    0</tspan> <tspan class="b" style="fill:#f38ba8">    3</tspan> <tspan style="fill:#f9e2af">    1</tspan> <tspan class="d">    0</tspan>     27  repeat offender</text>
+<text id="l12" class="l" x="20" y="284"> cursor               1      6        5 <tspan class="d">    0</tspan> <tspan class="b" style="fill:#f38ba8">    5</tspan> <tspan style="fill:#f9e2af">    1</tspan> <tspan class="d">    0</tspan>     43  repeat offender</text>
 <text id="l13" class="l" x="20" y="302"></text>
 <text id="l14" class="l" x="20" y="320"> <tspan class="b">TOP OFFENSES</tspan></text>
 <rect class="l" id="r15_1" x="87.4" y="325" width="33.7" height="17" fill="#d70000"/>
 <text id="l15" class="l" x="20" y="338">    4x  <tspan class="b" style="fill:#ffffff">CRIT</tspan>  Touched a tattlr canary                    <tspan class="d">claude-code, openclaw</tspan></text>
 <rect class="l" id="r16_1" x="87.4" y="343" width="33.7" height="17" fill="#d70000"/>
-<text id="l16" class="l" x="20" y="356">    2x  <tspan class="b" style="fill:#ffffff">CRIT</tspan>  Piped a remote script into a shell         <tspan class="d">claude-code, gemini-cli</tspan></text>
+<text id="l16" class="l" x="20" y="356">    3x  <tspan class="b" style="fill:#ffffff">CRIT</tspan>  Piped a remote script into a shell         <tspan class="d">claude-code, codex, gemini-cli</tspan></text>
 <rect class="l" id="r17_1" x="87.4" y="361" width="33.7" height="17" fill="#d70000"/>
 <text id="l17" class="l" x="20" y="374">    1x  <tspan class="b" style="fill:#ffffff">CRIT</tspan>  Wrote straight to a disk device            <tspan class="d">gemini-cli</tspan></text>
 <rect class="l" id="r18_1" x="87.4" y="379" width="33.7" height="17" fill="#d70000"/>
@@ -42,7 +42,7 @@
 <rect class="l" id="r20_1" x="87.4" y="415" width="33.7" height="17" fill="#d70000"/>
 <text id="l20" class="l" x="20" y="428">    1x  <tspan class="b" style="fill:#ffffff">CRIT</tspan>  Sent data out after reading a secret       <tspan class="d">gemini-cli</tspan></text>
 <text id="l21" class="l" x="20" y="446">    8x  <tspan class="b" style="fill:#f38ba8">HIGH</tspan>  Read a secret file                         <tspan class="d">claude-code, cursor, gemini-cli, openclaw</tspan></text>
-<text id="l22" class="l" x="20" y="464">    3x  <tspan class="b" style="fill:#f38ba8">HIGH</tspan>  Edited its own config or hooks             <tspan class="d">claude-code, cursor, gemini-cli</tspan></text>
+<text id="l22" class="l" x="20" y="464">    4x  <tspan class="b" style="fill:#f38ba8">HIGH</tspan>  Wiped history or switched off a defense    <tspan class="d">codex, cursor, gemini-cli</tspan></text>
 <text id="l23" class="l" x="20" y="482"> <tspan class="d">  ...and 18 more kinds, see --json</tspan></text>
 <text id="l24" class="l" x="20" y="500"></text>
 <text id="l25" class="l" x="20" y="518"> <tspan class="b">WORST MOMENTS</tspan></text>
@@ -67,7 +67,7 @@
 <text id="l39" class="l" x="20" y="770">       Wrote straight to a disk device, Used sudo</text>
 <text id="l40" class="l" x="20" y="788">       <tspan style="fill:#94e2d5">sudo dd if=/dev/zero of=/dev/sdb bs=4M status=progress</tspan></text>
 <text id="l41" class="l" x="20" y="806"></text>
-<text id="l42" class="l" x="20" y="824"> <tspan class="d">Read 15 log files on this machine. Nothing was uploaded. Secrets in commands are masked.</tspan></text>
+<text id="l42" class="l" x="20" y="824"> <tspan class="d">Read 18 log files on this machine. Nothing was uploaded. Secrets in commands are masked.</tspan></text>
 <text id="l43" class="l" x="20" y="842"> <tspan class="d">Next: `tattlr protect install` blocks this stuff before it runs. YOLO mode stays on.</tspan></text>
 <text id="l44" class="l" x="20" y="860"></text>
 <g id="l45" class="l"><text x="20" y="878"><tspan class="p">$ </tspan></text>

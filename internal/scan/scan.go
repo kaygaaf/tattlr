@@ -192,8 +192,9 @@ func Run(o Options) (*Result, error) {
 			continue
 		}
 		st := &AgentStats{Agent: p.Agent(), BySeverity: map[string]int{}}
-		// Count sessions by id, not by file: Claude Code subagent
-		// transcripts live in their own files but share the parent's id.
+		// Count sessions by id, not by file. Claude Code subagent
+		// transcripts share the parent's id. Codex, Gemini and Cursor
+		// set Parent, and their events use that id too.
 		seenSession := map[string]bool{}
 		var sessions []*event.Session
 		for _, f := range p.Discover(o.Home) {
@@ -206,22 +207,32 @@ func Run(o Options) (*Result, error) {
 				sessions = append(sessions, s)
 			}
 		}
-		// Forked, resumed and set-aside Claude transcripts repeat earlier
-		// calls under the same tool_use id. Oldest session wins.
-		// Real secrets read so far, per session, for secret-then-egress.
+		// Oldest file first, so a secret read in the parent is already tracked
+		// when a later subagent call sends it. Walk order is not time order.
+		sort.SliceStable(sessions, func(i, j int) bool { return sessionStart(sessions[i]).Before(sessionStart(sessions[j])) })
+		// Forked, resumed and set-aside transcripts repeat earlier calls
+		// under the same id. The first file keeps every event, including
+		// one Codex apply_patch that touches several paths. A later file's
+		// copy of that id is skipped.
 		taints := map[string]*rules.Taint{}
-		var seenCall map[string]bool
+		seenCall := map[string]string{}
+		var dedupe bool
 		if u, ok := p.(interface{ UniqueCallIDs() bool }); ok && u.UniqueCallIDs() {
-			seenCall = map[string]bool{}
-			sort.SliceStable(sessions, func(i, j int) bool { return sessionStart(sessions[i]).Before(sessionStart(sessions[j])) })
+			dedupe = true
 		}
 		for _, s := range sessions {
+			key := s.ID
+			if s.Parent != "" {
+				key = s.Parent
+			}
 			for _, e := range s.Events {
-				if seenCall != nil && e.CallID != "" {
-					if seenCall[e.CallID] {
+				if dedupe && e.CallID != "" {
+					if src, ok := seenCall[e.CallID]; ok && src != e.Source {
 						continue
 					}
-					seenCall[e.CallID] = true
+					if _, ok := seenCall[e.CallID]; !ok {
+						seenCall[e.CallID] = e.Source
+					}
 				}
 				if !o.Since.IsZero() && !e.Time.IsZero() && e.Time.Before(o.Since) {
 					continue
@@ -229,8 +240,8 @@ func Run(o Options) (*Result, error) {
 				if o.Project != "" && !strings.Contains(strings.ToLower(e.Project), strings.ToLower(o.Project)) {
 					continue
 				}
-				if !seenSession[s.ID] {
-					seenSession[s.ID] = true
+				if !seenSession[key] {
+					seenSession[key] = true
 					st.Sessions++
 				}
 				st.ToolCalls++
@@ -247,10 +258,10 @@ func Run(o Options) (*Result, error) {
 						blocked = true
 					}
 				}
-				t := taints[s.ID]
+				t := taints[key]
 				if t == nil {
 					t = &rules.Taint{}
-					taints[s.ID] = t
+					taints[key] = t
 				}
 				if f, ok := en.SecretEgress(t, e, fs); ok {
 					fs = append(fs, f)

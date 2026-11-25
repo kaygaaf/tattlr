@@ -8,6 +8,9 @@
 // written more than once as it updates, so the last copy of each id wins.
 // Older versions wrote a single session-*.json object with a messages array.
 // Tool calls look like {id, name, args, result, status, timestamp}.
+//
+// A subagent chat is chats/<parent session id>/<session id>.jsonl
+// (chatRecordingService.ts). The directory name is the parent.
 package gemini
 
 import (
@@ -36,7 +39,7 @@ func (Parser) Discover(home string) []string {
 }
 
 func (Parser) Parse(path string) (*event.Session, error) {
-	s := &event.Session{Agent: event.AgentGemini, Source: path}
+	s := &event.Session{Agent: event.AgentGemini, Source: path, Parent: parentSessionID(path)}
 	var order []string
 	msgs := map[string]map[string]any{}
 	addMsg := func(m map[string]any) {
@@ -116,6 +119,10 @@ func (Parser) Parse(path string) (*event.Session, error) {
 			}
 		}
 	}
+	sid := s.ID
+	if s.Parent != "" {
+		sid = s.Parent
+	}
 	for _, id := range order {
 		m := msgs[id]
 		mts := jsonl.Time(m["timestamp"])
@@ -128,7 +135,7 @@ func (Parser) Parse(path string) (*event.Session, error) {
 			if ts.IsZero() {
 				ts = mts
 			}
-			e := event.Event{Agent: event.AgentGemini, SessionID: s.ID, Project: s.Project, Source: path,
+			e := event.Event{Agent: event.AgentGemini, SessionID: sid, Project: s.Project, Source: path,
 				Time: ts, CallID: jsonl.Str(call, "id")}
 			toolmap.Fill(&e, jsonl.Str(call, "name"), jsonl.Obj(call, "args"))
 			e.Output = jsonl.ContentText(call["result"])
@@ -136,4 +143,15 @@ func (Parser) Parse(path string) (*event.Session, error) {
 		}
 	}
 	return s, err
+}
+
+// parentSessionID is the directory name when the file sits one level under
+// chats/, which is where Gemini CLI writes a subagent chat. A main session
+// file sits directly in chats/ and has no parent.
+func parentSessionID(path string) string {
+	parts := strings.Split(filepath.ToSlash(path), "/")
+	if len(parts) >= 3 && parts[len(parts)-3] == "chats" {
+		return parts[len(parts)-2]
+	}
+	return ""
 }

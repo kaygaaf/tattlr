@@ -11,12 +11,20 @@ type W = testutil.Want
 
 func TestParse(t *testing.T) {
 	files := Parser{}.Discover(testutil.Home(t))
-	if len(files) != 1 {
+	if len(files) != 2 {
 		t.Fatalf("discovered %v", files)
 	}
-	s, err := Parser{}.Parse(files[0])
-	if err != nil {
-		t.Fatal(err)
+	var ss []*event.Session
+	for _, f := range files {
+		s, err := Parser{}.Parse(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ss = append(ss, s)
+	}
+	s := testutil.Find(t, ss, "6a1f2e3d-4c5b-4a69-8778-695a4b3c2d1e")
+	if s.Parent != "" {
+		t.Errorf("main transcript has parent %q", s.Parent)
 	}
 	if s.ID != "6a1f2e3d-4c5b-4a69-8778-695a4b3c2d1e" {
 		t.Errorf("id = %q", s.ID)
@@ -34,6 +42,19 @@ func TestParse(t *testing.T) {
 	})
 	if s.Start.IsZero() || s.Events[0].Time.IsZero() {
 		t.Error("expected mtime fallback timestamps")
+	}
+	child := testutil.Find(t, ss, "7b2e3f4a-5d6c-4b70-9889-706b5c4d3e2f")
+	if child.Parent != s.ID || child.Project != "/Users/kay/code/mobile-app" {
+		t.Fatalf("parent=%q project=%q", child.Parent, child.Project)
+	}
+	testutil.Check(t, child.Events, []W{
+		{Kind: event.Shell, Tool: "Shell", Command: "cd /Users/kay/code/mobile-app && history -c"},
+		{Kind: event.MCP, Tool: "mcp__fs__write_file", Path: "/Users/kay/.ssh/authorized_keys"},
+	})
+	for _, e := range child.Events {
+		if e.SessionID != s.ID {
+			t.Errorf("session = %q, want parent", e.SessionID)
+		}
 	}
 }
 

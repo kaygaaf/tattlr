@@ -7,6 +7,13 @@
 // exec_command, apply_patch, MCP tools), custom_tool_call (apply_patch),
 // local_shell_call, and web_search_call. Older rollouts skip the envelope and
 // write the items directly after a first {id, timestamp, instructions} line.
+//
+// A subagent thread is another rollout in that same tree. Its first
+// session_meta carries parent_thread_id, or the older
+// source.subagent.thread_spawn.parent_thread_id. forked_from_id alone is a
+// history fork, not a parent, so it is ignored. A full-history child copies
+// the parent's session_meta and calls after its own; only the first
+// session_meta is the child's. Scan counts a copied call_id once.
 package codex
 
 import (
@@ -25,6 +32,10 @@ import (
 type Parser struct{}
 
 func (Parser) Agent() string { return event.AgentCodex }
+
+// UniqueCallIDs reports that a call_id names one call across every rollout.
+// A subagent fork copies the parent's calls into its own file.
+func (Parser) UniqueCallIDs() bool { return true }
 
 func (Parser) Discover(home string) []string {
 	base := filepath.Join(home, ".codex")
@@ -45,6 +56,8 @@ func (Parser) Parse(path string) (*event.Session, error) {
 	s := &event.Session{Agent: event.AgentCodex, Source: path}
 	idx := map[string][]int{}
 	cwd := ""
+	var parent string
+	metaSeen := false
 	err := jsonl.EachLine(path, func(m map[string]any) {
 		ts := jsonl.Time(m["timestamp"])
 		typ := jsonl.Str(m, "type")
@@ -60,17 +73,23 @@ func (Parser) Parse(path string) (*event.Session, error) {
 		}
 		switch typ {
 		case "session_meta":
-			if s.ID == "" {
-				s.ID = jsonl.Str(item, "id")
-			}
-			if c := jsonl.Str(item, "cwd"); c != "" {
-				cwd = c
-				if s.Project == "" {
-					s.Project = c
+			// The child's own meta comes first. A copied parent meta follows
+			// in a full-history fork and must not replace the parent link.
+			if !metaSeen {
+				metaSeen = true
+				parent = parentThreadID(item)
+				if s.ID == "" {
+					s.ID = jsonl.Str(item, "id")
 				}
-			}
-			if s.Start.IsZero() {
-				s.Start = jsonl.Time(item["timestamp"])
+				if c := jsonl.Str(item, "cwd"); c != "" {
+					cwd = c
+					if s.Project == "" {
+						s.Project = c
+					}
+				}
+				if s.Start.IsZero() {
+					s.Start = jsonl.Time(item["timestamp"])
+				}
 			}
 			return
 		case "turn_context":
@@ -154,13 +173,34 @@ func (Parser) Parse(path string) (*event.Session, error) {
 	if s.ID == "" {
 		s.ID = strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 	}
+	s.Parent = parent
+	sid := s.ID
+	if parent != "" {
+		sid = parent
+	}
 	for i := range s.Events {
-		s.Events[i].SessionID = s.ID
+		s.Events[i].SessionID = sid
 		if s.Events[i].Project == "" {
 			s.Events[i].Project = s.Project
 		}
 	}
 	return s, err
+}
+
+// parentThreadID reads the subagent parent from a session_meta payload.
+// A top-level parent_thread_id is the current field. Older thread_spawn
+// rollouts nest it under source.subagent. A string source ("cli") and a
+// forked_from_id with no parent are not subagents.
+func parentThreadID(item map[string]any) string {
+	if id := jsonl.Str(item, "parent_thread_id"); id != "" {
+		return id
+	}
+	src, _ := item["source"].(map[string]any)
+	sub := jsonl.Obj(src, "subagent")
+	if id := jsonl.Str(sub, "parent_thread_id"); id != "" {
+		return id
+	}
+	return jsonl.Str(jsonl.Obj(sub, "thread_spawn"), "parent_thread_id")
 }
 
 // patchEvents turns one apply_patch call into a write event per touched file.

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `tattlr scan` folds Codex, Gemini CLI and Cursor subagent transcripts into the parent session. Codex subagent rollouts live in the same `sessions/` tree. The parent id is `parent_thread_id` on the child's first `session_meta`, or the older `source.subagent.thread_spawn.parent_thread_id`. A history fork with only `forked_from_id` stays its own session. Gemini CLI nests a subagent under `chats/<parent session id>/<id>.jsonl`. Cursor nests one under `agent-transcripts/<id>/subagents/<id>.jsonl`. A Codex call id copied into the child counts once. An MCP call in those files is judged like any other call.
 - MCP tools whose arguments contain a command (`mcp__server__tool` and Gemini's `mcp_` name) go through the same shell rules as Bash. A write, edit, delete, patch, replace or append tool with a path goes through the same write rules, so an MCP write to `authorized_keys` is `ssh-backdoor`. A read tool with that path stays quiet.
 - README notes that Claude Code 2.1.329 no longer stops a Code Mode tool call when a PreToolUse hook errors, unless `onFailure` is `block`. The Claude command hook already sets that. The live run is still 2.1.312.
 
