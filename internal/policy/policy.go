@@ -122,6 +122,7 @@ rules:
   publish: ask
   ssh-backdoor: ask
   cover-tracks: ask
+  codex-remote: ask
   agent-config: ask
   shell-profile: ask
   rm-rf: allow

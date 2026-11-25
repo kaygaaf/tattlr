@@ -195,7 +195,24 @@ func TestShellRules(t *testing.T) {
 		{cmd: "crontab -l", not: []string{RulePersistence}},
 		{cmd: "launchctl load ~/Library/LaunchAgents/com.x.plist", want: []string{RulePersistence}},
 		{cmd: "claude -p 'fix it' --dangerously-skip-permissions", want: []string{RuleYoloSpawn}},
-		{cmd: "codex exec --yolo 'ship it'", want: []string{RuleYoloSpawn}},
+		{cmd: "codex exec --yolo 'ship it'", want: []string{RuleYoloSpawn}, not: []string{"codex-remote"}},
+		{cmd: "codex exec --remote ws://10.0.0.8:8787", want: []string{"codex-remote"}, sev: map[string]Severity{"codex-remote": High}},
+		{cmd: "codex exec --remote=unix:///tmp/codex.sock 'fix the tests'", want: []string{"codex-remote"}},
+		{cmd: "codex --remote unix://codex.sock", want: []string{"codex-remote"}},
+		{cmd: "codex exec --remote-auth-token-env CODEX_REMOTE_TOKEN --remote wss://example.com:443/", want: []string{"codex-remote"}},
+		{cmd: "codex remote-control pair", want: []string{"codex-remote"}},
+		{cmd: "codex remote-control start", want: []string{"codex-remote"}},
+		{cmd: "codex remote-control", want: []string{"codex-remote"}},
+		{cmd: "codex app-server --remote-control", want: []string{"codex-remote"}},
+		{cmd: "codex app-server daemon enable-remote-control", want: []string{"codex-remote"}},
+		{cmd: "codex app-server daemon --remote-control", want: []string{"codex-remote"}},
+		{cmd: "codex exec 'summarize the diff'", not: []string{"codex-remote"}},
+		{cmd: "codex app-server", not: []string{"codex-remote"}},
+		{cmd: "CODEX_HOME=/tmp/codex-trust codex app-server", not: []string{"codex-remote"}},
+		{cmd: "codex remote-control stop", not: []string{"codex-remote"}},
+		{cmd: "codex remote-control --help", not: []string{"codex-remote"}},
+		{cmd: "codex app-server daemon disable-remote-control", not: []string{"codex-remote"}},
+		{cmd: "echo codex exec --remote ws://10.0.0.8:8787", not: []string{"codex-remote"}},
 		{cmd: "curl 'https://api.example.com/v1?token=ghp_abcdefghijklmnopqrstuvwxyz0123'", want: []string{RuleSecretInURL}},
 	}
 	for _, c := range cases {
@@ -350,5 +367,28 @@ func TestSplitShell(t *testing.T) {
 	}
 	if len(segs[1].Out) != 1 || segs[1].Out[0] != "~/.zshrc" || !segs[1].PipeNext {
 		t.Errorf("segment 1: %+v", segs[1])
+	}
+}
+
+func TestCodexRemoteDetailAndPairing(t *testing.T) {
+	en := &Engine{}
+	fs := en.Check(event.Event{Kind: event.Shell, Command: "codex exec --remote ws://10.0.0.8:8787"})
+	if len(fs) != 1 || fs[0].Rule != RuleCodexRemote || fs[0].Severity != High {
+		t.Fatalf("got %+v", fs)
+	}
+	if !strings.Contains(fs[0].Detail, "ws://10.0.0.8:8787") {
+		t.Errorf("detail = %q", fs[0].Detail)
+	}
+	out := en.Check(event.Event{Kind: event.Shell, Command: "codex remote-control pair", Output: "Pairing code: ABCD-EFGH"})
+	if !contains(ids(out), RuleCodexRemote) {
+		t.Fatalf("pairing output: %v", ids(out))
+	}
+	// The printed line on its own, with no remote flag, is still a pairing code.
+	logged := en.Check(event.Event{Kind: event.Other, Output: "Pairing code: ABCD-EFGH"})
+	if !contains(ids(logged), RuleCodexRemote) || sev(logged, RuleCodexRemote) != High {
+		t.Fatalf("log line: %+v", logged)
+	}
+	if contains(ids(en.Check(event.Event{Kind: event.Other, Output: "remote control is a TUI command"})), RuleCodexRemote) {
+		t.Error("prose about remote control was flagged")
 	}
 }

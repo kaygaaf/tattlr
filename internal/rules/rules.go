@@ -104,6 +104,7 @@ const (
 	RuleReverseShell  = "reverse-shell"
 	RuleSSHBackdoor   = "ssh-backdoor"
 	RuleCoverTracks   = "cover-tracks"
+	RuleCodexRemote   = "codex-remote"
 )
 
 // Info describes one rule for humans.
@@ -149,6 +150,7 @@ var Catalog = map[string]Info{
 	RuleReverseShell:  {RuleReverseShell, "Opened a reverse shell", "network", Critical},
 	RuleSSHBackdoor:   {RuleSSHBackdoor, "Added an SSH key to authorized_keys", "tampering", High},
 	RuleCoverTracks:   {RuleCoverTracks, "Wiped history or switched off a defense", "tampering", High},
+	RuleCodexRemote:   {RuleCodexRemote, "Sent Codex to another machine", "privilege", High},
 }
 
 // Finding is one rule hit on one event.
@@ -231,6 +233,9 @@ func (en *Engine) Check(e event.Event) []Finding {
 				}
 			}
 		}
+	}
+	if pairingRe.MatchString(e.Command) || pairingRe.MatchString(e.Args) || pairingRe.MatchString(e.Output) {
+		add(RuleCodexRemote, "pairing code", 0)
 	}
 	return out
 }
@@ -384,6 +389,7 @@ func (en *Engine) checkShell(cmd string, add func(string, string, Severity)) {
 	if yoloRe.MatchString(cmd) {
 		add(RuleYoloSpawn, "", 0)
 	}
+	checkCodexRemote(cmd, segs, add)
 	if sqlDropRe.MatchString(cmd) {
 		add(RuleSQLDrop, "", 0)
 	}

@@ -140,6 +140,13 @@ func TestModes(t *testing.T) {
 	if d := st.Decide(fs[:1], e, ""); d.Action != Ask {
 		t.Errorf("strict medium: %+v", d)
 	}
+	remote := (&rules.Engine{}).Check(event.Event{Kind: event.Shell, Command: "codex exec --remote ws://10.0.0.8:8787"})
+	if Default().Decide(remote, event.Event{Kind: event.Shell, Command: "codex exec --remote ws://10.0.0.8:8787"}, "").Action != Ask {
+		t.Errorf("protect codex-remote: %+v", remote)
+	}
+	if st.Decide(remote, event.Event{Kind: event.Shell, Command: "codex exec --remote ws://10.0.0.8:8787"}, "").Action != Deny {
+		t.Errorf("strict codex-remote: %+v", remote)
+	}
 	// self-protect cannot be turned down.
 	weak, _ := Parse("rules:\n  self-protect: allow")
 	if d := weak.Decide([]rules.Finding{find("self-protect", rules.Critical)}, e, ""); d.Action != Deny {

@@ -601,3 +601,25 @@ func TestNotify(t *testing.T) {
 		t.Errorf("codex: %q", got)
 	}
 }
+
+func TestCodexRemoteHook(t *testing.T) {
+	v := newEnv(t)
+	cmd := "codex exec --remote ws://10.0.0.8:8787"
+	d, reason := claudeDecision(t, v.hook("claude", claudeBash("s", v.proj, cmd)))
+	if d != "ask" || !strings.Contains(reason, "another machine") {
+		t.Fatalf("protect: %s %q", d, reason)
+	}
+	plain, _ := claudeDecision(t, v.hook("claude", claudeBash("s", v.proj, "codex exec 'summarize the diff'")))
+	if plain != "allow" {
+		t.Fatalf("plain codex exec: %s", plain)
+	}
+	trust, _ := claudeDecision(t, v.hook("claude", claudeBash("s", v.proj, "codex app-server")))
+	if trust != "allow" {
+		t.Fatalf("local app-server: %s", trust)
+	}
+	v.policy("mode: strict\n")
+	d, reason = claudeDecision(t, v.hook("claude", claudeBash("s", v.proj, cmd)))
+	if d != "deny" || !strings.Contains(reason, "another machine") {
+		t.Fatalf("strict: %s %q", d, reason)
+	}
+}
